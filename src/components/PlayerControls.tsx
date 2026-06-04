@@ -86,10 +86,10 @@ const Bar = styled.div`
 const Btn = styled.button`
   width: 32px;
   height: 32px;
-  border: 1px solid ${theme.border};
+  border: 1px solid var(--vs-border, ${theme.border});
   border-radius: 8px;
-  background: ${theme.panel};
-  color: ${theme.text};
+  background: var(--vs-list-hover, ${theme.panel});
+  color: var(--vs-text, ${theme.text});
   font-size: 12px;
   cursor: pointer;
 
@@ -99,7 +99,7 @@ const Btn = styled.button`
   }
 
   &:not(:disabled):hover {
-    background: ${theme.border};
+    background: var(--vs-list-active, ${theme.border});
   }
 `
 
@@ -126,15 +126,15 @@ const Slider = styled.input`
 
 const StepLabel = styled.span`
   font-family: ${theme.mono};
-  font-size: 12px;
-  color: ${theme.subtext};
+  font-size: 12.5px;
+  color: var(--vs-text-dim, ${theme.subtext});
   white-space: nowrap;
 `
 
 const SpeedSelect = styled.select`
-  background: ${theme.panel};
-  color: ${theme.text};
-  border: 1px solid ${theme.border};
+  background: var(--vs-list-hover, ${theme.panel});
+  color: var(--vs-text, ${theme.text});
+  border: 1px solid var(--vs-border, ${theme.border});
   border-radius: 8px;
   padding: 5px 7px;
   font-size: 12px;

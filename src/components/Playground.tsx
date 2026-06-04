@@ -1,7 +1,7 @@
 // 코드 실행 페이지 (/playground) — VS Code와 동일한 디자인
 // 멀티 파일(F-34): 탐색기에서 파일 생성·삭제·전환. 확장자로 언어 결정.
 // 실행(F-05/F-35): .py는 브라우저 내 Pyodide 추적+시각화, 그 외 언어는 실행 서버(Wandbox)로 출력 실행.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import CodeMirror from '@uiw/react-codemirror'
@@ -86,23 +86,25 @@ type RemoteState =
   | { status: 'done'; out: RemoteOutput }
   | { status: 'error'; message: string }
 
-// VS Code Dark+ 팔레트
+// 테마 UI 팔레트 — 선택한 스타일이 CSS 변수로 전체 크롬에 주입된다 (Wrap의 style)
 const VS = {
-  titleBar: '#323233',
-  activityBar: '#333333',
-  sideBar: '#252526',
-  sideBarHeader: '#bbbbbb',
-  tabsBar: '#252526',
-  tabInactive: '#2d2d2d',
-  tabActive: '#1e1e1e',
-  editor: '#1e1e1e',
-  panel: '#1e1e1e',
-  statusBar: '#007acc',
-  text: '#cccccc',
-  textDim: '#858585',
-  listHover: '#2a2d2e',
-  listActive: '#37373d',
-  run: '#89d185',
+  titleBar: 'var(--vs-titlebar)',
+  activityBar: 'var(--vs-activitybar)',
+  sideBar: 'var(--vs-sidebar)',
+  sideBarHeader: 'var(--vs-text-dim)',
+  tabsBar: 'var(--vs-tabsbar)',
+  tabInactive: 'var(--vs-tab-inactive)',
+  tabActive: 'var(--vs-tab-active)',
+  editor: 'var(--vs-editor)',
+  panel: 'var(--vs-panel)',
+  statusBar: 'var(--vs-statusbar)',
+  text: 'var(--vs-text)',
+  textDim: 'var(--vs-text-dim)',
+  border: 'var(--vs-border)',
+  listHover: 'var(--vs-list-hover)',
+  listActive: 'var(--vs-list-active)',
+  run: 'var(--vs-run)',
+  accent: 'var(--vs-accent)',
 } as const
 
 export default function Playground() {
@@ -131,6 +133,24 @@ export default function Playground() {
   const runner = usePythonRunner()
 
   const editorTheme = themeById(themeId)
+  const cssVars = {
+    '--vs-titlebar': editorTheme.ui.titleBar,
+    '--vs-activitybar': editorTheme.ui.activityBar,
+    '--vs-sidebar': editorTheme.ui.sideBar,
+    '--vs-tabsbar': editorTheme.ui.tabsBar,
+    '--vs-tab-inactive': editorTheme.ui.tabInactive,
+    '--vs-tab-active': editorTheme.ui.tabActive,
+    '--vs-editor': editorTheme.ui.editor,
+    '--vs-panel': editorTheme.ui.panel,
+    '--vs-statusbar': editorTheme.ui.statusBar,
+    '--vs-text': editorTheme.ui.text,
+    '--vs-text-dim': editorTheme.ui.textDim,
+    '--vs-border': editorTheme.ui.border,
+    '--vs-list-hover': editorTheme.ui.listHover,
+    '--vs-list-active': editorTheme.ui.listActive,
+    '--vs-run': editorTheme.ui.run,
+    '--vs-accent': editorTheme.ui.accent,
+  } as CSSProperties
 
   const selectTheme = (id: string) => {
     setThemeId(id)
@@ -330,7 +350,7 @@ export default function Playground() {
     (remote.status === 'error' ? remote.message : null)
 
   return (
-    <Wrap>
+    <Wrap style={cssVars}>
       {/* ── 타이틀 바 ── */}
       <TitleBar>
         <TrafficLights aria-hidden="true">
@@ -727,7 +747,7 @@ const TitleBar = styled.div`
   align-items: center;
   justify-content: center;
   background: ${VS.titleBar};
-  border-bottom: 1px solid #252525;
+  border-bottom: 1px solid var(--vs-border);
 `
 
 const TrafficLights = styled.div`
@@ -745,7 +765,7 @@ const TrafficLights = styled.div`
 
 const TitleText = styled.span`
   font-size: 12.5px;
-  color: #9d9d9d;
+  color: var(--vs-text-dim);
 `
 
 // ── 메인 행 ──
@@ -771,15 +791,15 @@ const ActivityIcon = styled.button<{ $active?: boolean }>`
   height: 48px;
   border: none;
   background: none;
-  color: ${({ $active }) => ($active ? '#ffffff' : '#858585')};
-  border-left: 2px solid ${({ $active }) => ($active ? '#ffffff' : 'transparent')};
+  color: ${({ $active }) => ($active ? 'var(--vs-text)' : 'var(--vs-text-dim)')};
+  border-left: 2px solid ${({ $active }) => ($active ? 'var(--vs-text)' : 'transparent')};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: #ffffff;
+    color: var(--vs-text);
   }
 
   &:disabled {
@@ -801,7 +821,7 @@ const SideBar = styled.div`
   flex-direction: column;
   overflow-y: auto;
   background: ${VS.sideBar};
-  border-right: 1px solid #1e1e1e;
+  border-right: 1px solid var(--vs-border);
 `
 
 const SideBarTitle = styled.div`
@@ -836,7 +856,7 @@ const NewFileBtn = styled.button`
 
   &:hover {
     background: ${VS.listHover};
-    color: #fff;
+    color: var(--vs-text);
   }
 `
 
@@ -890,7 +910,7 @@ const FileDelete = styled.button`
   opacity: 0;
 
   &:hover {
-    color: #fff;
+    color: var(--vs-text);
   }
 `
 
@@ -903,8 +923,8 @@ const NewFileRow = styled.div`
     font-size: 12.5px;
     font-family: inherit;
     color: ${VS.text};
-    background: #3c3c3c;
-    border: 1px solid #007fd4;
+    background: var(--vs-list-hover);
+    border: 1px solid var(--vs-accent);
     border-radius: 2px;
     outline: none;
   }
@@ -922,7 +942,7 @@ const ThemeItem = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: 10px;
   padding: 9px 10px;
-  border: 1px solid ${({ $active }) => ($active ? '#007fd4' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? 'var(--vs-accent)' : 'transparent')};
   border-radius: 6px;
   background: ${({ $active }) => ($active ? VS.listActive : 'transparent')};
   text-align: left;
@@ -999,7 +1019,7 @@ const EditorGroup = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1e1e1e;
+  border-right: 1px solid var(--vs-border);
 `
 
 const VizGroup = styled.div`
@@ -1023,14 +1043,14 @@ const Tab = styled.div<{ $active?: boolean }>`
   gap: 7px;
   padding: 0 14px;
   font-size: 14px;
-  color: ${({ $active }) => ($active ? '#ffffff' : '#969696')};
+  color: ${({ $active }) => ($active ? 'var(--vs-text)' : 'var(--vs-text-dim)')};
   background: ${({ $active }) => ($active ? VS.tabActive : VS.tabInactive)};
-  border-right: 1px solid #252525;
+  border-right: 1px solid var(--vs-border);
 `
 
 const TabClose = styled.span`
   margin-left: 4px;
-  color: #858585;
+  color: var(--vs-text-dim);
   font-size: 14px;
 `
 
@@ -1038,7 +1058,7 @@ const TabBadge = styled.span`
   margin-left: 6px;
   font-family: 'SF Mono', Menlo, monospace;
   font-size: 10px;
-  color: #858585;
+  color: var(--vs-text-dim);
 `
 
 const TabsSpacer = styled.div`
@@ -1107,7 +1127,7 @@ const VizScroll = styled.div`
 const VizControls = styled.div`
   flex-shrink: 0;
   padding: 10px 14px;
-  border-top: 1px solid #2b2b2b;
+  border-top: 1px solid var(--vs-border);
 `
 
 const Placeholder = styled.div`
@@ -1121,7 +1141,7 @@ const Placeholder = styled.div`
 
   span {
     font-size: 36px;
-    color: #3a3f47;
+    color: var(--vs-text-dim);
   }
 
   p {
@@ -1144,7 +1164,7 @@ const Panel = styled.div`
   display: flex;
   flex-direction: column;
   background: ${VS.panel};
-  border-top: 1px solid #2b2b2b;
+  border-top: 1px solid var(--vs-border);
 `
 
 const PanelTabs = styled.div`
@@ -1162,8 +1182,8 @@ const PanelTabBtn = styled.button<{ $active: boolean }>`
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: ${({ $active }) => ($active ? '#e7e7e7' : VS.textDim)};
-  border-bottom: 1px solid ${({ $active }) => ($active ? '#e7e7e7' : 'transparent')};
+  color: ${({ $active }) => ($active ? 'var(--vs-text)' : VS.textDim)};
+  border-bottom: 1px solid ${({ $active }) => ($active ? 'var(--vs-text)' : 'transparent')};
   cursor: pointer;
 `
 
@@ -1211,7 +1231,7 @@ const Notice = styled.div`
   font-size: 12.5px;
   color: #ddb45f;
   background: rgba(217, 168, 51, 0.08);
-  border-top: 1px solid #2b2b2b;
+  border-top: 1px solid var(--vs-border);
   white-space: pre-wrap;
 `
 

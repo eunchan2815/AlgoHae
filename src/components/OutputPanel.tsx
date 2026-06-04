@@ -43,10 +43,10 @@ const Wrap = styled.div`
 
 const Header = styled.div`
   padding: 6px 14px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: ${theme.subtext};
-  background: ${theme.panelLight};
+  color: var(--vs-text-dim, ${theme.subtext});
+  background: var(--vs-tabsbar, ${theme.panelLight});
 `
 
 const Body = styled.div`
@@ -54,7 +54,8 @@ const Body = styled.div`
   overflow: auto;
   padding: 8px 14px;
   font-family: ${theme.mono};
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--vs-text, ${theme.text});
   line-height: 1.6;
 
   pre {
@@ -65,7 +66,7 @@ const Body = styled.div`
 `
 
 const Muted = styled.span`
-  color: ${theme.subtext};
+  color: var(--vs-text-dim, ${theme.subtext});
 `
 
 const Notice = styled.div`

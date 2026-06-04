@@ -101,7 +101,7 @@ const Empty = styled.p`
   margin: 0;
   padding: 20px 0;
   text-align: center;
-  color: ${theme.subtext};
+  color: var(--vs-text-dim, ${theme.subtext});
   font-size: 14px;
 `
 
@@ -114,8 +114,8 @@ const Group = styled.div`
 
 const VarName = styled.span`
   font-family: ${theme.mono};
-  font-size: 12px;
-  color: ${theme.subtext};
+  font-size: 12.5px;
+  color: var(--vs-text-dim, ${theme.subtext});
 `
 
 const BoxRow = styled.div`
@@ -129,7 +129,7 @@ const BoxRow = styled.div`
 const RING_COLOR: Record<Ring, string> = {
   teal: theme.teal,
   gold: theme.gold,
-  none: '#2c3434',
+  none: 'var(--vs-border, #2c3434)',
 }
 
 const RING_GLOW: Record<Ring, string> = {
@@ -149,9 +149,9 @@ const Box = styled.div<{ $ring: Ring }>`
   font-size: 17px;
   font-weight: 600;
   border-radius: 11px;
-  background: #141716;
+  background: var(--vs-list-hover, #141716);
   border: 2px solid ${({ $ring }) => RING_COLOR[$ring]};
-  color: #d8d8d8;
+  color: var(--vs-text, #d8d8d8);
   box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 `

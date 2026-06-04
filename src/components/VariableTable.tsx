@@ -87,8 +87,8 @@ const Header = styled.div`
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 700;
-  color: ${theme.subtext};
-  background: ${theme.panelLight};
+  color: var(--vs-text-dim, ${theme.subtext});
+  background: var(--vs-tabsbar, ${theme.panelLight});
   display: flex;
   gap: 8px;
   align-items: center;
@@ -97,26 +97,27 @@ const Header = styled.div`
 const Func = styled.span`
   font-family: ${theme.mono};
   font-weight: 400;
-  color: ${theme.accent};
+  color: var(--vs-accent, ${theme.accent});
 `
 
 const Empty = styled.p`
   margin: 16px 14px;
-  font-size: 13px;
-  color: ${theme.subtext};
+  font-size: 14px;
+  color: var(--vs-text-dim, ${theme.subtext});
 `
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--vs-text, ${theme.text});
 
   th {
     text-align: left;
     padding: 6px 14px;
-    color: ${theme.subtext};
+    color: var(--vs-text-dim, ${theme.subtext});
     font-weight: 400;
-    border-bottom: 1px solid ${theme.border};
+    border-bottom: 1px solid var(--vs-border, ${theme.border});
   }
 
   td {
@@ -131,12 +132,12 @@ const Row = styled.tr<{ $changed: boolean }>`
   background: ${({ $changed }) => ($changed ? theme.changedBg : 'transparent')};
 
   td:first-child {
-    color: ${theme.accent};
+    color: var(--vs-accent, ${theme.accent});
     white-space: nowrap;
   }
 
   td:nth-child(2) {
-    color: ${theme.subtext};
+    color: var(--vs-text-dim, ${theme.subtext});
     white-space: nowrap;
   }
 `
