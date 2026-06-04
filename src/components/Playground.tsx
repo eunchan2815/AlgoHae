@@ -146,6 +146,7 @@ export default function Playground() {
   const [remote, setRemote] = useState<RemoteState>({ status: 'idle' })
   const remoteAbort = useRef<AbortController | null>(null)
   const editorRef = useRef<EditorView | null>(null)
+  const activeTabRef = useRef<HTMLDivElement | null>(null)
   const runner = usePythonRunner()
 
   const editorTheme = themeById(themeId)
@@ -211,6 +212,11 @@ export default function Playground() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [openTabs, activeId])
+
+  // 활성 탭이 탭바 밖에 있으면 자동으로 스크롤해서 보이게
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+  }, [activeId, openTabs.length])
 
   // F-22 자동 재생 — 한 틱씩 예약 (끝에 도달하면 자동 정지)
   useEffect(() => {
@@ -628,7 +634,13 @@ export default function Playground() {
           <EditorRow>
             <EditorGroup>
               <TabsBar>
-                <TabsScroll>
+                <TabsScroll
+                  onWheel={(e) => {
+                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                      e.currentTarget.scrollLeft += e.deltaY
+                    }
+                  }}
+                >
                 {openTabs.map((tabId) => {
                   const tabFile = files.find((f) => f.id === tabId)
                   if (!tabFile) return null
@@ -636,6 +648,7 @@ export default function Playground() {
                   return (
                     <Tab
                       key={tabId}
+                      ref={tabId === activeFile.id ? activeTabRef : undefined}
                       $active={tabId === activeFile.id}
                       onClick={() => selectFile(tabId)}
                     >
