@@ -188,6 +188,30 @@ export default function Playground() {
   const codeLines = code.replace(/\n$/, '').split('\n')
   const currentLineText = snap && snap.line >= 1 ? (codeLines[snap.line - 1] ?? '') : ''
 
+  // 브라우저 탭 제목 = 현재 파일 (타이틀바 제거 대체)
+  useEffect(() => {
+    document.title = `${activeFile.name} — 알고해`
+  }, [activeFile.name])
+
+  // Cmd+W / Ctrl+W / Alt+W → 탭 닫기 (Cmd+W는 브라우저가 가로챌 수 있어 Alt+W 병행)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'KeyW' && (e.metaKey || e.ctrlKey || e.altKey)) {
+        e.preventDefault()
+        if (openTabs.length > 1) {
+          const next = openTabs.filter((t) => t !== activeId)
+          setOpenTabs(next)
+          localStorage.setItem(TABS_KEY, JSON.stringify(next))
+          const fallback = next[next.length - 1]
+          setActiveId(fallback)
+          localStorage.setItem(ACTIVE_KEY, fallback)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openTabs, activeId])
+
   // F-22 자동 재생 — 한 틱씩 예약 (끝에 도달하면 자동 정지)
   useEffect(() => {
     if (!playing) return
@@ -410,16 +434,6 @@ export default function Playground() {
 
   return (
     <Wrap style={cssVars}>
-      {/* ── 타이틀 바 ── */}
-      <TitleBar>
-        <TrafficLights aria-hidden="true">
-          <i style={{ background: '#ff5f57' }} />
-          <i style={{ background: '#febc2e' }} />
-          <i style={{ background: '#28c840' }} />
-        </TrafficLights>
-        <TitleText>{activeFile.name} — 알고해</TitleText>
-      </TitleBar>
-
       <MainRow>
         {/* ── 액티비티 바 ── */}
         <ActivityBar>
@@ -614,6 +628,7 @@ export default function Playground() {
           <EditorRow>
             <EditorGroup>
               <TabsBar>
+                <TabsScroll>
                 {openTabs.map((tabId) => {
                   const tabFile = files.find((f) => f.id === tabId)
                   if (!tabFile) return null
@@ -640,7 +655,7 @@ export default function Playground() {
                     </Tab>
                   )
                 })}
-                <TabsSpacer />
+                </TabsScroll>
                 {isRunning ? (
                   <RunAction type="button" onClick={handleStop} title="실행 중단" $stop>
                     <StopIcon />
@@ -841,37 +856,6 @@ const Wrap = styled.div`
   background: ${VS.editor};
   color: ${VS.text};
   animation: ${fadeUp} 0.3s ease both;
-`
-
-// ── 타이틀 바 ──
-
-const TitleBar = styled.div`
-  position: relative;
-  height: 30px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: ${VS.titleBar};
-  border-bottom: 1px solid var(--vs-border);
-`
-
-const TrafficLights = styled.div`
-  position: absolute;
-  left: 12px;
-  display: flex;
-  gap: 8px;
-
-  i {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-`
-
-const TitleText = styled.span`
-  font-size: 12.5px;
-  color: var(--vs-text-dim);
 `
 
 // ── 메인 행 ──
@@ -1145,6 +1129,7 @@ const TabsBar = styled.div`
 
 const Tab = styled.div<{ $active?: boolean }>`
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 7px;
   padding: 0 14px;
@@ -1200,8 +1185,22 @@ const TabBadge = styled.span`
   color: var(--vs-text-dim);
 `
 
-const TabsSpacer = styled.div`
+const TabsScroll = styled.div`
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--vs-list-active);
+    border-radius: 2px;
+  }
 `
 
 const RunAction = styled.button<{ $stop?: boolean }>`
