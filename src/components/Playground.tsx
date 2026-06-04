@@ -9,6 +9,11 @@ import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { java } from '@codemirror/lang-java'
 import { cpp } from '@codemirror/lang-cpp'
+import { rust } from '@codemirror/lang-rust'
+import { StreamLanguage } from '@codemirror/language'
+import { ruby } from '@codemirror/legacy-modes/mode/ruby'
+import { swift } from '@codemirror/legacy-modes/mode/swift'
+import { kotlin } from '@codemirror/legacy-modes/mode/clike'
 import { EditorView } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 import pythonLogo from '../assets/langs/python.svg'
@@ -74,6 +79,14 @@ function editorLangExtensions(fileName: string): Extension[] {
     case 'cpp':
     case 'cs':
       return [cpp()]
+    case 'rs':
+      return [rust()]
+    case 'rb':
+      return [StreamLanguage.define(ruby)]
+    case 'swift':
+      return [StreamLanguage.define(swift)]
+    case 'kt':
+      return [StreamLanguage.define(kotlin)]
     default:
       return []
   }

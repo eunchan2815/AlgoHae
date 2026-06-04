@@ -1,5 +1,5 @@
 // F-35 언어별 실행 예제 — 탐색기 "언어 예제" 섹션에서 클릭하면 파일로 생성됨
-// 주의: Java·Kotlin 실행 서버는 한글 출력이 깨지므로 영문 출력 사용
+// Java·Kotlin 한글 출력은 실행기가 UTF-8 설정을 자동 주입해서 처리 (runners/remote.ts)
 export interface LangExample {
   name: string
   content: string
@@ -36,7 +36,7 @@ public class prog {
         for (int i = 1; i <= 10; i++) {
             sum += i;
         }
-        System.out.println("sum = " + sum);
+        System.out.println("합계: " + sum);
     }
 }
 `,
@@ -75,7 +75,7 @@ int main() {
     for (i in 1..10) {
         sum += i
     }
-    println("sum = " + sum)
+    println("합계: " + sum)
 }
 `,
   },

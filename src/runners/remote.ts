@@ -34,6 +34,22 @@ function getWandboxCompilers(): Promise<WandboxCompiler[]> {
   return compilersPromise
 }
 
+// JVM 계열은 서버 기본 인코딩이 ASCII라 한글 출력이 ?로 깨진다.
+// main 진입 직후에 UTF-8 PrintStream 설정을 자동 주입해서 해결 (실험으로 검증됨)
+function injectJavaUtf8(content: string): string {
+  return content.replace(
+    /(public\s+static\s+void\s+main\s*\([^)]*\)\s*\{)/,
+    '$1\n        System.setOut(new java.io.PrintStream(System.out, true, java.nio.charset.StandardCharsets.UTF_8));',
+  )
+}
+
+function injectKotlinUtf8(content: string): string {
+  return content.replace(
+    /(fun\s+main\s*\([^)]*\)\s*\{)/,
+    '$1\n    System.setOut(java.io.PrintStream(System.out, true, "UTF-8"))',
+  )
+}
+
 async function runWandbox(
   language: string,
   content: string,
@@ -43,6 +59,7 @@ async function runWandbox(
   // 목록 첫 항목이 최신
   const compiler = compilers.find((c) => c.language === language)
   if (!compiler) throw new Error(`이 언어의 실행 환경을 찾지 못했어요: ${language}`)
+  if (language === 'Java') content = injectJavaUtf8(content)
 
   const res = await fetch(`${WANDBOX_API}/compile.json`, {
     method: 'POST',
@@ -76,6 +93,7 @@ async function runGodbolt(
   content: string,
   signal?: AbortSignal,
 ): Promise<RemoteOutput> {
+  if (compiler.startsWith('kotlinc')) content = injectKotlinUtf8(content)
   const res = await fetch(`${GODBOLT_API}/compiler/${compiler}/compile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

@@ -222,7 +222,7 @@ CapturedValue = {
 > - **1단계 — 출력 실행 (완료, F-35):** Python 외 언어는 실행 서버로 컴파일·실행해 출력만 보여준다.
 >   기본은 Wandbox, Wandbox가 깨졌거나(Swift, catatonit 오류) 없는(Kotlin) 언어는 godbolt(Compiler Explorer).
 >   시간 상한 90초(무한 "실행 중" 방지). (참고: Piston API는 2026-02부터 화이트리스트 전용이라 제외)
->   알려진 한계: JVM 계열(Java·Kotlin)은 서버 인코딩 문제로 한글 출력이 ?로 깨짐 — UI에서 안내.
+>   JVM 계열(Java·Kotlin) 한글 출력 깨짐은 main에 UTF-8 PrintStream 설정을 자동 주입해서 해결.
 > - **2단계 — 추적 시각화 (로드맵):** 언어별 추적 엔진 확보 순서대로 시각화 승격.
 >   JS/TS(스텝 실행 인터프리터 존재, 현실적) → Java·C++ 등(장기 과제).
 > - 프라이버시 원칙: Python은 브라우저 안에서만 실행(코드 미전송), 서버 실행 언어는 UI에 명시한다.
