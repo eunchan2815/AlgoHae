@@ -1,7 +1,7 @@
 // 코드 실행 페이지 (/playground) — VS Code와 동일한 디자인
 // 멀티 파일(F-34): 탐색기에서 파일 생성·삭제·전환. 확장자로 언어 결정.
 // 실행(F-05/F-35): .py는 브라우저 내 Pyodide 추적+시각화, 그 외 언어는 실행 서버(Wandbox)로 출력 실행.
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import CodeMirror from '@uiw/react-codemirror'
@@ -139,6 +139,12 @@ export default function Playground() {
     () => localStorage.getItem('algohae:theme') ?? DEFAULT_THEME_ID,
   )
   const [panelTab, setPanelTab] = useState<PanelTab>('vars')
+  // 하단 패널 높이 — 위 가장자리를 드래그해서 조절 (VS Code 패널과 동일)
+  const [panelHeight, setPanelHeight] = useState<number>(() => {
+    const saved = Number(localStorage.getItem('algohae:panelHeight'))
+    return saved >= 64 ? saved : 200
+  })
+  const panelDrag = useRef<{ startY: number; startH: number } | null>(null)
   const [openTabs, setOpenTabs] = useState<string[]>(() => {
     const all = loadFiles()
     const savedActive = localStorage.getItem(ACTIVE_KEY)
@@ -262,6 +268,27 @@ export default function Playground() {
       ],
     })
   }, [result, snap, isPython])
+
+  const onPanelResizeStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    panelDrag.current = { startY: e.clientY, startH: panelHeight }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onPanelResizeMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!panelDrag.current) return
+    const raw = panelDrag.current.startH + (panelDrag.current.startY - e.clientY)
+    const clamped = Math.min(Math.max(raw, 64), window.innerHeight - 220)
+    setPanelHeight(clamped)
+  }
+
+  const onPanelResizeEnd = () => {
+    if (!panelDrag.current) return
+    panelDrag.current = null
+    setPanelHeight((h) => {
+      localStorage.setItem('algohae:panelHeight', String(Math.round(h)))
+      return h
+    })
+  }
 
   const clearRunState = () => {
     setPlaying(false)
@@ -769,7 +796,17 @@ export default function Playground() {
           </EditorRow>
 
           {/* ── 하단 패널: 변수 / 출력 ── */}
-          <Panel>
+          <PanelResizer
+            onPointerDown={onPanelResizeStart}
+            onPointerMove={onPanelResizeMove}
+            onPointerUp={onPanelResizeEnd}
+            onDoubleClick={() => {
+              setPanelHeight(200)
+              localStorage.setItem('algohae:panelHeight', '200')
+            }}
+            title="드래그로 패널 크기 조절 · 더블클릭으로 초기화"
+          />
+          <Panel style={{ height: panelHeight }}>
             <PanelTabs>
               <PanelTabBtn
                 type="button"
@@ -1323,8 +1360,24 @@ const Placeholder = styled.div`
 
 // ── 하단 패널 ──
 
+const PanelResizer = styled.div`
+  height: 5px;
+  margin-bottom: -5px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 5;
+  cursor: row-resize;
+  touch-action: none;
+  background: transparent;
+  transition: background 0.15s ease;
+
+  &:hover,
+  &:active {
+    background: var(--vs-accent);
+  }
+`
+
 const Panel = styled.div`
-  height: 200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
