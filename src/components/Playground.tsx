@@ -244,7 +244,7 @@ export default function Playground() {
     const id = window.setTimeout(() => {
       setStep(step + 1)
       if (step + 1 >= total - 1) setPlaying(false)
-    }, 1000 / speed) // 1x = 스텝당 1초 — 입문자가 변수 변화를 따라갈 수 있는 속도
+    }, 2000 / speed) // 1x = 스텝당 2초 (기존 0.5x), 2x = 1초 (기존 1x) — 한 단계씩 전체 하향
     return () => clearTimeout(id)
   }, [playing, step, speed, total])
 
