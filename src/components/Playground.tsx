@@ -856,6 +856,12 @@ const Wrap = styled.div`
   background: ${VS.editor};
   color: ${VS.text};
   animation: ${fadeUp} 0.3s ease both;
+
+  /* 스크롤바도 적용된 테마를 따라간다 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--vs-list-active) transparent;
+  }
 `
 
 // ── 메인 행 ──
@@ -1191,15 +1197,10 @@ const TabsScroll = styled.div`
   display: flex;
   align-items: stretch;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* 탭바는 스크롤바 숨김 — 휠/트랙패드로 스크롤 */
 
   &::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--vs-list-active);
-    border-radius: 2px;
+    display: none;
   }
 `
 
