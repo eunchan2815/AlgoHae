@@ -656,7 +656,7 @@ export default function Playground() {
                       {tabFile.name}
                       <TabClose
                         type="button"
-                        title="탭 닫기"
+                        title="탭 닫기 (⌥W 또는 Ctrl+W)"
                         $hidden={openTabs.length <= 1}
                         onClick={(e) => {
                           e.stopPropagation()
