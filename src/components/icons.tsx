@@ -62,6 +62,40 @@ export function NewFileIcon({ size = 18 }: IconProps) {
   )
 }
 
+export function SkipBackIcon({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 5.5v13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M18.5 5.8v12.4a.6.6 0 0 1-.95.5l-8.4-6.2a.6.6 0 0 1 0-.97l8.4-6.2a.6.6 0 0 1 .95.49Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function StepBackIcon({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M17.5 5.8v12.4a.6.6 0 0 1-.95.5l-8.4-6.2a.6.6 0 0 1 0-.97l8.4-6.2a.6.6 0 0 1 .95.49Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function StepForwardIcon({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6.5 5.8v12.4a.6.6 0 0 0 .95.5l8.4-6.2a.6.6 0 0 0 0-.97l-8.4-6.2a.6.6 0 0 0-.95.49Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function PauseIcon({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" />
+      <rect x="13.8" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function ExtensionsIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">

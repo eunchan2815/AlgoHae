@@ -1,6 +1,7 @@
 // 특화 레이어 — F-17 리스트 → 박스열 (레퍼런스 스타일)
-// 현재 줄이 접근 중인 원소를 틸/골드 글로우로 하이라이트 (레퍼런스의 비교 쌍 표현)
-import styled from 'styled-components'
+// 현재 줄이 접근 중인 원소를 파랑/골드 글로우로 하이라이트 + 자리가 바뀐 박스는 슬라이드 애니메이션
+import type { CSSProperties } from 'react'
+import styled, { keyframes } from 'styled-components'
 import { theme } from '../styles/theme'
 import type { CapturedValue, Snapshot } from '../types/snapshot'
 
@@ -12,6 +13,9 @@ interface Props {
 }
 
 type Ring = 'teal' | 'gold' | 'none'
+
+/** 박스 한 칸의 가로 이동 거리 (min-width 46 + gap 11) */
+const BOX_STEP = 57
 
 /** 박스열로 그릴 수 있는 리스트인가 — 원소가 전부 스칼라 */
 function isBoxable(value: CapturedValue): boolean {
@@ -46,6 +50,32 @@ function accessedIndices(
   return found
 }
 
+/**
+ * 각 위치의 값이 직전 스냅샷의 어디에서 왔는지 추적 (FLIP 애니메이션용).
+ * 값이 같은 자리에 그대로면 null, 이동해 왔으면 출발 인덱스.
+ */
+function fromIndices(prevItems: CapturedValue[] | null, items: CapturedValue[]): (number | null)[] {
+  if (!prevItems) return items.map(() => null)
+  const used = new Set<number>()
+  const cur = items.map((item) => JSON.stringify(item))
+  const old = prevItems.map((item) => JSON.stringify(item))
+  // 1차: 안 움직인 값이 자기 자리를 먼저 차지
+  items.forEach((_, i) => {
+    if (old[i] === cur[i]) used.add(i)
+  })
+  // 2차: 움직인 값은 가장 가까운 같은 값의 옛 위치와 매칭
+  return items.map((_, i) => {
+    if (old[i] === cur[i]) return null
+    let best: number | null = null
+    for (let j = 0; j < old.length; j++) {
+      if (used.has(j) || old[j] !== cur[i]) continue
+      if (best === null || Math.abs(j - i) < Math.abs(best - i)) best = j
+    }
+    if (best !== null) used.add(best)
+    return best
+  })
+}
+
 export default function VizPanel({ snap, prev, currentLineText }: Props) {
   const boxLists = Object.entries(snap.vars).filter(([, value]) => isBoxable(value))
 
@@ -61,6 +91,7 @@ export default function VizPanel({ snap, prev, currentLineText }: Props) {
         const prevItems =
           prevValue && isBoxable(prevValue) ? (prevValue.v as CapturedValue[]) : null
         const accessed = accessedIndices(name, currentLineText, snap.vars)
+        const origins = fromIndices(prevItems, items)
 
         return (
           <Group key={name}>
@@ -69,12 +100,23 @@ export default function VizPanel({ snap, prev, currentLineText }: Props) {
               {items.map((item, i) => {
                 const changed =
                   prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
-                // 레퍼런스: 비교 쌍의 첫 번째는 틸, 두 번째는 골드. 값이 바뀐 원소도 골드
+                // 레퍼런스: 비교 쌍의 첫 번째는 파랑, 두 번째는 골드. 값이 바뀐 원소도 골드
                 let ring: Ring = 'none'
                 if (accessed[0] === i) ring = 'teal'
                 if (accessed[1] === i || changed) ring = 'gold'
+                const from = origins[i]
                 return (
-                  <Box key={i} $ring={ring}>
+                  <Box
+                    // 스텝마다 key가 바뀌어 이동 애니메이션이 다시 실행된다
+                    key={`${snap.step}-${i}`}
+                    $ring={ring}
+                    $moved={from !== null}
+                    style={
+                      from !== null
+                        ? ({ '--dx': `${(from - i) * BOX_STEP}px` } as CSSProperties)
+                        : undefined
+                    }
+                  >
                     {String(item.v)}
                   </Box>
                 )
@@ -138,7 +180,17 @@ const RING_GLOW: Record<Ring, string> = {
   none: 'none',
 }
 
-const Box = styled.div<{ $ring: Ring }>`
+// 출발 위치(--dx)에서 제자리로 미끄러져 들어온다
+const slideIn = keyframes`
+  from {
+    transform: translateX(var(--dx, 0));
+  }
+  to {
+    transform: translateX(0);
+  }
+`
+
+const Box = styled.div<{ $ring: Ring; $moved: boolean }>`
   min-width: 46px;
   height: 46px;
   padding: 0 9px;
@@ -154,6 +206,9 @@ const Box = styled.div<{ $ring: Ring }>`
   color: var(--vs-text, #d8d8d8);
   box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  animation: ${({ $moved }) => ($moved ? slideIn : 'none')} 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  z-index: ${({ $moved }) => ($moved ? 1 : 0)};
 `
 
 const Ellipsis = styled.span`
