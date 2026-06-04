@@ -9,17 +9,17 @@ import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { java } from '@codemirror/lang-java'
 import { cpp } from '@codemirror/lang-cpp'
-import { vscodeDark } from '@uiw/codemirror-theme-vscode'
 import { EditorView } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 import pythonLogo from '../assets/langs/python.svg'
 import { EXAMPLES, DEFAULT_CODE, type Example } from '../examples'
 import { LANG_EXAMPLES } from '../examples/langExamples'
 import { langOf, extOf } from '../data/langs'
+import { EDITOR_THEMES, DEFAULT_THEME_ID, themeById } from '../data/themes'
 import { usePythonRunner } from '../hooks/usePythonRunner'
 import { runRemote, type RemoteOutput } from '../runners/remote'
 import { execLineExtensions, setExecLine, setErrorLine } from './editorExecLine'
-import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon } from './icons'
+import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon, ExtensionsIcon } from './icons'
 import VizPanel from './VizPanel'
 import VariableTable from './VariableTable'
 import OutputPanel from './OutputPanel'
@@ -118,6 +118,10 @@ export default function Playground() {
   const [speed, setSpeed] = useState(1)
   const [editNotice, setEditNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sideView, setSideView] = useState<'explorer' | 'styles'>('explorer')
+  const [themeId, setThemeId] = useState<string>(
+    () => localStorage.getItem('algohae:theme') ?? DEFAULT_THEME_ID,
+  )
   const [panelTab, setPanelTab] = useState<PanelTab>('vars')
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -125,6 +129,13 @@ export default function Playground() {
   const remoteAbort = useRef<AbortController | null>(null)
   const editorRef = useRef<EditorView | null>(null)
   const runner = usePythonRunner()
+
+  const editorTheme = themeById(themeId)
+
+  const selectTheme = (id: string) => {
+    setThemeId(id)
+    localStorage.setItem('algohae:theme', id)
+  }
 
   const activeFile = files.find((f) => f.id === activeId) ?? files[0]
   const code = activeFile.content
@@ -335,11 +346,31 @@ export default function Playground() {
         <ActivityBar>
           <ActivityIcon
             type="button"
-            $active={sidebarOpen}
+            $active={sidebarOpen && sideView === 'explorer'}
             title="탐색기"
-            onClick={() => setSidebarOpen((v) => !v)}
+            onClick={() => {
+              if (sidebarOpen && sideView === 'explorer') setSidebarOpen(false)
+              else {
+                setSideView('explorer')
+                setSidebarOpen(true)
+              }
+            }}
           >
             <FilesIcon />
+          </ActivityIcon>
+          <ActivityIcon
+            type="button"
+            $active={sidebarOpen && sideView === 'styles'}
+            title="스타일 (에디터 테마)"
+            onClick={() => {
+              if (sidebarOpen && sideView === 'styles') setSidebarOpen(false)
+              else {
+                setSideView('styles')
+                setSidebarOpen(true)
+              }
+            }}
+          >
+            <ExtensionsIcon />
           </ActivityIcon>
           <ActivityIcon
             type="button"
@@ -356,7 +387,35 @@ export default function Playground() {
         </ActivityBar>
 
         {/* ── 사이드바 (탐색기) ── */}
-        {sidebarOpen && (
+        {sidebarOpen && sideView === 'styles' && (
+          <SideBar>
+            <SideBarTitle>스타일</SideBarTitle>
+            <SideBarSection>에디터 테마</SideBarSection>
+            <ThemeList>
+              {EDITOR_THEMES.map((t) => (
+                <ThemeItem
+                  key={t.id}
+                  type="button"
+                  $active={t.id === themeId}
+                  onClick={() => selectTheme(t.id)}
+                >
+                  <Swatch aria-hidden="true">
+                    {t.swatch.map((color, i) => (
+                      <i key={i} style={{ background: color }} />
+                    ))}
+                  </Swatch>
+                  <ThemeMeta>
+                    <strong>{t.name}</strong>
+                    <span>{t.desc}</span>
+                  </ThemeMeta>
+                  {t.id === themeId && <AppliedBadge>적용됨</AppliedBadge>}
+                </ThemeItem>
+              ))}
+            </ThemeList>
+          </SideBar>
+        )}
+
+        {sidebarOpen && sideView === 'explorer' && (
           <SideBar>
             <SideBarTitle>탐색기</SideBarTitle>
 
@@ -477,7 +536,7 @@ export default function Playground() {
                   key={activeFile.id}
                   value={code}
                   onChange={handleCodeChange}
-                  theme={vscodeDark}
+                  theme={editorTheme.theme}
                   extensions={editorLangExtensions(activeFile.name)}
                   height="100%"
                   style={{ height: '100%' }}
@@ -849,6 +908,75 @@ const NewFileRow = styled.div`
     border-radius: 2px;
     outline: none;
   }
+`
+
+const ThemeList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 8px 12px;
+`
+
+const ThemeItem = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid ${({ $active }) => ($active ? '#007fd4' : 'transparent')};
+  border-radius: 6px;
+  background: ${({ $active }) => ($active ? VS.listActive : 'transparent')};
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? VS.listActive : VS.listHover)};
+  }
+`
+
+const Swatch = styled.span`
+  display: flex;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid #00000055;
+
+  i {
+    flex: 1;
+  }
+`
+
+const ThemeMeta = styled.span`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: ${VS.text};
+  }
+
+  span {
+    font-size: 11.5px;
+    color: ${VS.textDim};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`
+
+const AppliedBadge = styled.span`
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fff;
+  background: ${VS.statusBar};
+  border-radius: 999px;
 `
 
 // ── 에디터/시각화 그룹 ──
