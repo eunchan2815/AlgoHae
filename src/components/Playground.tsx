@@ -663,7 +663,7 @@ export default function Playground() {
                           closeTab(tabId)
                         }}
                       >
-                        <CloseIcon size={12} />
+                        <CloseIcon size={16} />
                       </TabClose>
                     </Tab>
                   )
@@ -1164,9 +1164,9 @@ const TabClose = styled.button<{ $hidden?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 4px;
+  width: 26px;
+  height: 26px;
+  margin-left: 5px;
   border: none;
   border-radius: 4px;
   background: none;
