@@ -27,6 +27,7 @@ import PlayerControls from './PlayerControls'
 
 const FILES_KEY = 'algohae:files' // F-34 멀티 파일 저장
 const ACTIVE_KEY = 'algohae:activeFile'
+const TABS_KEY = 'algohae:openTabs'
 const LEGACY_CODE_KEY = 'algohae:code'
 
 interface UserFile {
@@ -125,6 +126,21 @@ export default function Playground() {
     () => localStorage.getItem('algohae:theme') ?? DEFAULT_THEME_ID,
   )
   const [panelTab, setPanelTab] = useState<PanelTab>('vars')
+  const [openTabs, setOpenTabs] = useState<string[]>(() => {
+    const all = loadFiles()
+    const savedActive = localStorage.getItem(ACTIVE_KEY)
+    const active = all.some((f) => f.id === savedActive) ? (savedActive as string) : all[0].id
+    try {
+      const saved = JSON.parse(localStorage.getItem(TABS_KEY) ?? '[]') as string[]
+      const valid = saved.filter((id) => all.some((f) => f.id === id))
+      if (valid.length) return valid.includes(active) ? valid : [...valid, active]
+    } catch {
+      /* 손상된 저장값은 무시 */
+    }
+    return [active]
+  })
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [remote, setRemote] = useState<RemoteState>({ status: 'idle' })
@@ -222,12 +238,51 @@ export default function Playground() {
     if (result || remote.status !== 'idle') clearRunState()
   }
 
+  const persistTabs = (tabs: string[]) => {
+    setOpenTabs(tabs)
+    localStorage.setItem(TABS_KEY, JSON.stringify(tabs))
+  }
+
   const selectFile = (id: string) => {
+    if (!openTabs.includes(id)) persistTabs([...openTabs, id])
     if (id === activeId) return
     setActiveId(id)
     localStorage.setItem(ACTIVE_KEY, id)
     setEditNotice(null)
     clearRunState()
+  }
+
+  const closeTab = (id: string) => {
+    if (openTabs.length <= 1) return // 마지막 탭은 닫지 않는다
+    const next = openTabs.filter((t) => t !== id)
+    persistTabs(next)
+    if (id === activeId) {
+      const fallback = next[next.length - 1]
+      setActiveId(fallback)
+      localStorage.setItem(ACTIVE_KEY, fallback)
+      clearRunState()
+    }
+  }
+
+  // 파일 이름 변경 — 탐색기에서 Enter(이미 선택된 파일) 또는 더블클릭
+  const startRename = (file: UserFile) => {
+    setRenamingId(file.id)
+    setRenameValue(file.name)
+  }
+
+  const commitRename = () => {
+    if (renamingId === null) return
+    const target = files.find((f) => f.id === renamingId)
+    const trimmed = renameValue.trim()
+    setRenamingId(null)
+    if (!target || !trimmed || trimmed === target.name) return
+    if (files.some((f) => f.id !== renamingId && f.name === trimmed)) {
+      setEditNotice(`"${trimmed}" 파일이 이미 있어요`)
+      return
+    }
+    updateFiles(files.map((f) => (f.id === renamingId ? { ...f, name: trimmed } : f)))
+    // 확장자가 바뀌면 언어·실행 방식도 바뀌므로 결과 초기화
+    if (renamingId === activeId) clearRunState()
   }
 
   const createFile = () => {
@@ -252,9 +307,12 @@ export default function Playground() {
     if (files.length <= 1) return
     const next = files.filter((f) => f.id !== id)
     updateFiles(next)
+    const nextTabs = openTabs.filter((t) => t !== id)
+    persistTabs(nextTabs.length ? nextTabs : [next[0].id])
     if (id === activeId) {
-      setActiveId(next[0].id)
-      localStorage.setItem(ACTIVE_KEY, next[0].id)
+      const fallback = nextTabs[nextTabs.length - 1] ?? next[0].id
+      setActiveId(fallback)
+      localStorage.setItem(ACTIVE_KEY, fallback)
       clearRunState()
     }
   }
@@ -268,6 +326,7 @@ export default function Playground() {
     } else {
       const file: UserFile = { id: newFileId(), name, content }
       updateFiles([...files, file])
+      persistTabs([...openTabs, file.id])
       setActiveId(file.id)
       localStorage.setItem(ACTIVE_KEY, file.id)
       clearRunState()
@@ -457,10 +516,36 @@ export default function Playground() {
                 const fileLang = langOf(file.name)
                 return (
                   <FileItem key={file.id} $active={file.id === activeFile.id}>
-                    <FileButton type="button" onClick={() => selectFile(file.id)}>
+                    {renamingId === file.id ? (
+                      <RenameRow>
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitRename()
+                            if (e.key === 'Escape') setRenamingId(null)
+                          }}
+                          onBlur={commitRename}
+                        />
+                      </RenameRow>
+                    ) : (
+                    <FileButton
+                      type="button"
+                      onClick={() => selectFile(file.id)}
+                      onDoubleClick={() => startRename(file)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && file.id === activeFile.id) {
+                          e.preventDefault()
+                          startRename(file)
+                        }
+                      }}
+                      title="Enter 또는 더블클릭으로 이름 바꾸기"
+                    >
                       <img src={fileLang?.logo ?? pythonLogo} alt="" width={14} height={14} />
                       {file.name}
                     </FileButton>
+                    )}
                     {files.length > 1 && (
                       <FileDelete
                         type="button"
@@ -529,11 +614,32 @@ export default function Playground() {
           <EditorRow>
             <EditorGroup>
               <TabsBar>
-                <Tab $active>
-                  <img src={lang?.logo ?? pythonLogo} alt="" width={14} height={14} />
-                  {activeFile.name}
-                  <TabClose aria-hidden="true">×</TabClose>
-                </Tab>
+                {openTabs.map((tabId) => {
+                  const tabFile = files.find((f) => f.id === tabId)
+                  if (!tabFile) return null
+                  const tabLang = langOf(tabFile.name)
+                  return (
+                    <Tab
+                      key={tabId}
+                      $active={tabId === activeFile.id}
+                      onClick={() => selectFile(tabId)}
+                    >
+                      <img src={tabLang?.logo ?? pythonLogo} alt="" width={14} height={14} />
+                      {tabFile.name}
+                      <TabClose
+                        type="button"
+                        title="탭 닫기"
+                        $hidden={openTabs.length <= 1}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          closeTab(tabId)
+                        }}
+                      >
+                        <CloseIcon size={12} />
+                      </TabClose>
+                    </Tab>
+                  )
+                })}
                 <TabsSpacer />
                 {isRunning ? (
                   <RunAction type="button" onClick={handleStop} title="실행 중단" $stop>
@@ -1046,12 +1152,45 @@ const Tab = styled.div<{ $active?: boolean }>`
   color: ${({ $active }) => ($active ? 'var(--vs-text)' : 'var(--vs-text-dim)')};
   background: ${({ $active }) => ($active ? VS.tabActive : VS.tabInactive)};
   border-right: 1px solid var(--vs-border);
+  cursor: pointer;
+  white-space: nowrap;
 `
 
-const TabClose = styled.span`
+const TabClose = styled.button<{ $hidden?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   margin-left: 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
   color: var(--vs-text-dim);
-  font-size: 14px;
+  cursor: pointer;
+  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
+
+  &:hover {
+    background: ${VS.listHover};
+    color: var(--vs-text);
+  }
+`
+
+const RenameRow = styled.div`
+  flex: 1;
+  padding: 3px 10px 3px 26px;
+
+  input {
+    width: 100%;
+    padding: 3px 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: ${VS.text};
+    background: ${VS.listHover};
+    border: 1px solid ${VS.accent};
+    border-radius: 2px;
+    outline: none;
+  }
 `
 
 const TabBadge = styled.span`
