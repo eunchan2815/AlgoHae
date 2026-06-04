@@ -565,9 +565,16 @@ export default function Playground() {
                   {!remote.out.stdout && !remote.out.stderr && (
                     <PanelEmpty>출력 없이 종료됐어요 (종료 코드 {remote.out.exitCode ?? '?'})</PanelEmpty>
                   )}
+                  {/* JVM 계열 실행 서버는 한글 stdout이 ?로 깨짐 — 서버 측 인코딩 한계 */}
+                  {(extOf(activeFile.name) === 'java' || extOf(activeFile.name) === 'kt') &&
+                    remote.out.stdout.includes('?') && (
+                      <Hint>💡 Java·Kotlin 실행 서버는 한글 출력이 ?로 깨질 수 있어요 (영문·숫자는 정상)</Hint>
+                    )}
                 </RemoteResult>
               ) : remote.status === 'running' ? (
-                <PanelEmpty>⏳ 실행 서버에서 컴파일·실행 중…</PanelEmpty>
+                <PanelEmpty>
+                  ⏳ 실행 서버에서 컴파일·실행 중… (컴파일 언어는 수십 초 걸릴 수 있어요)
+                </PanelEmpty>
               ) : (
                 <PanelEmpty>실행하면 출력이 여기에 나와요</PanelEmpty>
               )}
@@ -589,7 +596,7 @@ export default function Playground() {
             </>
           ) : (
             <>
-              {remote.status === 'running' && '▶ 실행 서버에서 컴파일·실행 중…'}
+              {remote.status === 'running' && '▶ 실행 서버에서 컴파일·실행 중… (수십 초 걸릴 수 있어요)'}
               {remote.status === 'done' && '✓ 실행 완료'}
               {(remote.status === 'idle' || remote.status === 'error') &&
                 `${lang?.name ?? '?'} — 실행 서버로 출력 실행`}
@@ -1012,6 +1019,12 @@ const PanelEmpty = styled.p`
   margin: 14px;
   font-size: 13px;
   font-family: 'SF Mono', Menlo, monospace;
+  color: ${VS.textDim};
+`
+
+const Hint = styled.p`
+  margin: 10px 0 0;
+  font-size: 12px;
   color: ${VS.textDim};
 `
 

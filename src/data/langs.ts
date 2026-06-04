@@ -11,6 +11,11 @@ import swiftLogo from '../assets/langs/swift.svg'
 import rustLogo from '../assets/langs/rust.svg'
 import rubyLogo from '../assets/langs/ruby.svg'
 
+/** 서버 실행 경로 — Wandbox(언어 이름) 또는 godbolt(컴파일러 ID) */
+export type RemoteRunner =
+  | { type: 'wandbox'; language: string }
+  | { type: 'godbolt'; compiler: string }
+
 export interface LangInfo {
   name: string
   logo: string
@@ -18,21 +23,25 @@ export interface LangInfo {
   ext: string
   /** 라인 추적 + 시각화 지원 (브라우저 내 실행) */
   traced: boolean
-  /** Wandbox 실행 서버의 언어 이름 (null이면 서버 실행 미지원) */
-  remote: string | null
+  /** 실행 서버 정보 (null이면 서버 실행 미지원) */
+  remote: RemoteRunner | null
 }
+
+const wandbox = (language: string): RemoteRunner => ({ type: 'wandbox', language })
+const godbolt = (compiler: string): RemoteRunner => ({ type: 'godbolt', compiler })
 
 export const LANGS: LangInfo[] = [
   { name: 'Python', logo: pythonLogo, ext: 'py', traced: true, remote: null },
-  { name: 'JavaScript', logo: javascriptLogo, ext: 'js', traced: false, remote: 'JavaScript' },
-  { name: 'TypeScript', logo: typescriptLogo, ext: 'ts', traced: false, remote: 'TypeScript' },
-  { name: 'Java', logo: javaLogo, ext: 'java', traced: false, remote: 'Java' },
-  { name: 'C++', logo: cppLogo, ext: 'cpp', traced: false, remote: 'C++' },
-  { name: 'C#', logo: csharpLogo, ext: 'cs', traced: false, remote: 'C#' },
-  { name: 'Kotlin', logo: kotlinLogo, ext: 'kt', traced: false, remote: null }, // Wandbox 미지원
-  { name: 'Swift', logo: swiftLogo, ext: 'swift', traced: false, remote: 'Swift' },
-  { name: 'Rust', logo: rustLogo, ext: 'rs', traced: false, remote: 'Rust' },
-  { name: 'Ruby', logo: rubyLogo, ext: 'rb', traced: false, remote: 'Ruby' },
+  { name: 'JavaScript', logo: javascriptLogo, ext: 'js', traced: false, remote: wandbox('JavaScript') },
+  { name: 'TypeScript', logo: typescriptLogo, ext: 'ts', traced: false, remote: wandbox('TypeScript') },
+  { name: 'Java', logo: javaLogo, ext: 'java', traced: false, remote: wandbox('Java') },
+  { name: 'C++', logo: cppLogo, ext: 'cpp', traced: false, remote: wandbox('C++') },
+  { name: 'C#', logo: csharpLogo, ext: 'cs', traced: false, remote: wandbox('C#') },
+  // Wandbox에 없거나(Kotlin) 환경이 깨진(Swift, catatonit 오류) 언어는 godbolt로 실행
+  { name: 'Kotlin', logo: kotlinLogo, ext: 'kt', traced: false, remote: godbolt('kotlinc2120') },
+  { name: 'Swift', logo: swiftLogo, ext: 'swift', traced: false, remote: godbolt('swift61') },
+  { name: 'Rust', logo: rustLogo, ext: 'rs', traced: false, remote: wandbox('Rust') },
+  { name: 'Ruby', logo: rubyLogo, ext: 'rb', traced: false, remote: wandbox('Ruby') },
 ]
 
 export const LANG_BY_EXT: Record<string, LangInfo> = Object.fromEntries(
