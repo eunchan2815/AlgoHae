@@ -14,10 +14,12 @@ import { EditorView } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 import pythonLogo from '../assets/langs/python.svg'
 import { EXAMPLES, DEFAULT_CODE, type Example } from '../examples'
+import { LANG_EXAMPLES } from '../examples/langExamples'
 import { langOf, extOf } from '../data/langs'
 import { usePythonRunner } from '../hooks/usePythonRunner'
 import { runRemote, type RemoteOutput } from '../runners/remote'
 import { execLineExtensions, setExecLine, setErrorLine } from './editorExecLine'
+import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon } from './icons'
 import VizPanel from './VizPanel'
 import VariableTable from './VariableTable'
 import OutputPanel from './OutputPanel'
@@ -226,20 +228,23 @@ export default function Playground() {
     }
   }
 
-  // 예제 클릭 → 같은 이름의 파일을 내 파일에 만들고(있으면 갱신) 연다
-  const loadExample = (example: Example) => {
-    const name = `${example.id.replace(/-/g, '_')}.py`
+  // 예제/템플릿 클릭 → 같은 이름의 파일을 내 파일에 만들고(있으면 갱신) 연다
+  const loadTemplate = (name: string, content: string) => {
     const existing = files.find((f) => f.name === name)
     if (existing) {
-      updateFiles(files.map((f) => (f.id === existing.id ? { ...f, content: example.code } : f)))
+      updateFiles(files.map((f) => (f.id === existing.id ? { ...f, content } : f)))
       selectFile(existing.id)
     } else {
-      const file: UserFile = { id: newFileId(), name, content: example.code }
+      const file: UserFile = { id: newFileId(), name, content }
       updateFiles([...files, file])
       setActiveId(file.id)
       localStorage.setItem(ACTIVE_KEY, file.id)
       clearRunState()
     }
+  }
+
+  const loadExample = (example: Example) => {
+    loadTemplate(`${example.id.replace(/-/g, '_')}.py`, example.code)
   }
 
   const runRemoteFile = async () => {
@@ -334,7 +339,7 @@ export default function Playground() {
             title="탐색기"
             onClick={() => setSidebarOpen((v) => !v)}
           >
-            ❐
+            <FilesIcon />
           </ActivityIcon>
           <ActivityIcon
             type="button"
@@ -342,11 +347,11 @@ export default function Playground() {
             onClick={handleRun}
             disabled={runDisabled}
           >
-            ▷
+            <RunIcon />
           </ActivityIcon>
           <ActivitySpacer />
           <ActivityIcon type="button" title="홈으로" onClick={() => navigate('/')}>
-            ⌂
+            <HomeIcon />
           </ActivityIcon>
         </ActivityBar>
 
@@ -365,7 +370,7 @@ export default function Playground() {
                   setNewName('')
                 }}
               >
-                +
+                <NewFileIcon />
               </NewFileBtn>
             </SideBarSection>
             <FileList>
@@ -383,7 +388,7 @@ export default function Playground() {
                         title="파일 삭제"
                         onClick={() => deleteFile(file.id)}
                       >
-                        ×
+                        <CloseIcon />
                       </FileDelete>
                     )}
                   </FileItem>
@@ -415,8 +420,24 @@ export default function Playground() {
                     onClick={() => loadExample(ex)}
                     title={`${ex.name} — ${ex.desc}`}
                   >
-                    <img src={pythonLogo} alt="" width={14} height={14} />
+                    <img src={pythonLogo} alt="" width={15} height={15} />
                     {ex.id.replace(/-/g, '_')}.py
+                  </FileButton>
+                </FileItem>
+              ))}
+            </FileList>
+
+            <SideBarSection>언어 예제</SideBarSection>
+            <FileList>
+              {LANG_EXAMPLES.map((le) => (
+                <FileItem key={le.name} $active={false}>
+                  <FileButton
+                    type="button"
+                    onClick={() => loadTemplate(le.name, le.content)}
+                    title={`${langOf(le.name)?.name ?? ''} 실행 예제`}
+                  >
+                    <img src={langOf(le.name)?.logo ?? pythonLogo} alt="" width={15} height={15} />
+                    {le.name}
                   </FileButton>
                 </FileItem>
               ))}
@@ -437,7 +458,7 @@ export default function Playground() {
                 <TabsSpacer />
                 {isRunning ? (
                   <RunAction type="button" onClick={handleStop} title="실행 중단" $stop>
-                    ■
+                    <StopIcon />
                   </RunAction>
                 ) : (
                   <RunAction
@@ -446,7 +467,7 @@ export default function Playground() {
                     disabled={runDisabled}
                     title={isPython ? '실행 (변수 추적 시작)' : `실행 (${lang?.name ?? ''} — 실행 서버)`}
                   >
-                    ▷
+                    <RunIcon size={20} />
                   </RunAction>
                 )}
               </TabsBar>
@@ -664,7 +685,7 @@ const TrafficLights = styled.div`
 `
 
 const TitleText = styled.span`
-  font-size: 12px;
+  font-size: 12.5px;
   color: #9d9d9d;
 `
 
@@ -688,12 +709,14 @@ const ActivityBar = styled.div`
 
 const ActivityIcon = styled.button<{ $active?: boolean }>`
   width: 48px;
-  height: 44px;
+  height: 48px;
   border: none;
   background: none;
   color: ${({ $active }) => ($active ? '#ffffff' : '#858585')};
   border-left: 2px solid ${({ $active }) => ($active ? '#ffffff' : 'transparent')};
-  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -723,8 +746,8 @@ const SideBar = styled.div`
 `
 
 const SideBarTitle = styled.div`
-  padding: 10px 18px 8px;
-  font-size: 11px;
+  padding: 12px 18px 8px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   color: ${VS.sideBarHeader};
 `
@@ -733,21 +756,23 @@ const SideBarSection = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px 4px 18px;
-  font-size: 11px;
+  padding: 8px 12px 5px 18px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
   color: ${VS.text};
 `
 
 const NewFileBtn = styled.button`
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: none;
   color: ${VS.textDim};
-  font-size: 14px;
   cursor: pointer;
 
   &:hover {
@@ -779,11 +804,11 @@ const FileButton = styled.button`
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 4px 4px 26px;
+  gap: 8px;
+  padding: 5px 4px 5px 26px;
   border: none;
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   color: ${VS.text};
   background: none;
@@ -794,11 +819,14 @@ const FileButton = styled.button`
 `
 
 const FileDelete = styled.button`
-  width: 22px;
+  width: 28px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: ${VS.textDim};
-  font-size: 14px;
   cursor: pointer;
   opacity: 0;
 
@@ -854,7 +882,7 @@ const VizGroup = styled.div`
 `
 
 const TabsBar = styled.div`
-  height: 35px;
+  height: 38px;
   flex-shrink: 0;
   display: flex;
   align-items: stretch;
@@ -865,8 +893,8 @@ const Tab = styled.div<{ $active?: boolean }>`
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 0 12px;
-  font-size: 13px;
+  padding: 0 14px;
+  font-size: 14px;
   color: ${({ $active }) => ($active ? '#ffffff' : '#969696')};
   background: ${({ $active }) => ($active ? VS.tabActive : VS.tabInactive)};
   border-right: 1px solid #252525;
@@ -890,11 +918,13 @@ const TabsSpacer = styled.div`
 `
 
 const RunAction = styled.button<{ $stop?: boolean }>`
-  width: 36px;
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: ${({ $stop }) => ($stop ? '#f48771' : VS.run)};
-  font-size: 16px;
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -913,7 +943,7 @@ const Breadcrumbs = styled.div`
   display: flex;
   align-items: center;
   padding: 0 14px;
-  font-size: 11px;
+  font-size: 12px;
   color: ${VS.textDim};
   background: ${VS.editor};
 `
@@ -925,7 +955,7 @@ const EditorHost = styled.div`
 
   .cm-editor {
     height: 100%;
-    font-size: 14px;
+    font-size: 15px;
   }
 `
 
@@ -968,7 +998,7 @@ const Placeholder = styled.div`
 
   p {
     margin: 0;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.7;
     color: ${VS.textDim};
   }
@@ -1000,7 +1030,7 @@ const PanelTabBtn = styled.button<{ $active: boolean }>`
   padding: 8px 2px 6px;
   border: none;
   background: none;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -1017,7 +1047,7 @@ const PanelBody = styled.div`
 
 const PanelEmpty = styled.p`
   margin: 14px;
-  font-size: 13px;
+  font-size: 14px;
   font-family: 'SF Mono', Menlo, monospace;
   color: ${VS.textDim};
 `
@@ -1031,7 +1061,7 @@ const Hint = styled.p`
 const RemoteResult = styled.div`
   padding: 10px 14px;
   font-family: 'SF Mono', Menlo, monospace;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 
   pre {
@@ -1069,7 +1099,7 @@ const StatusBar = styled.footer`
 `
 
 const StatusItem = styled.span`
-  font-size: 11.5px;
+  font-size: 12.5px;
   white-space: nowrap;
 `
 
