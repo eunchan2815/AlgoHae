@@ -113,6 +113,32 @@ def _no_input(*args, **kwargs):
     raise RuntimeError("ALGOHAE_NO_INPUT")  # F-29
 
 
+def _capture_stack(frame):
+    """F-11: 사용자 프레임만 모아 호출 스택 요약 (바깥 → 현재 순)"""
+    stack = []
+    f = frame
+    while f is not None:
+        if f.f_code.co_filename == "<algohae>":
+            brief = []
+            if f.f_code.co_name != "<module>":
+                for k, v in list(f.f_locals.items()):
+                    if k.startswith("__"):
+                        continue
+                    if v is None or isinstance(v, (bool, int, float, str)):
+                        s = str(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else repr(v)
+                        brief.append(k + "=" + s[:12])
+                    if len(brief) >= 3:
+                        break
+            stack.append({
+                "f": f.f_code.co_name,
+                "l": f.f_lineno,
+                "a": ", ".join(brief),
+            })
+        f = f.f_back
+    stack.reverse()
+    return stack
+
+
 def run_traced(code):
     snapshots = []
     out = StringIO()
@@ -152,6 +178,7 @@ def run_traced(code):
             "func": frame.f_code.co_name,
             "depth": depth,
             "vars": captured,
+            "stack": _capture_stack(frame),  # F-11 호출 스택
             "out": len(out.getvalue()),
         })
         return trace
@@ -197,6 +224,7 @@ def run_traced(code):
         "func": "",
         "depth": 0,
         "vars": last_vars,
+        "stack": [],
         "out": len(out.getvalue()),
     })
 

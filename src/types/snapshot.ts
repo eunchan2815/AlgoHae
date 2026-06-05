@@ -22,6 +22,13 @@ export interface CapturedValue {
 
 export type SnapshotEvent = 'line' | 'return' | 'exception' | 'done'
 
+/** F-11 호출 스택 한 프레임 — f: 함수명, l: 실행 중인 줄, a: 인자 요약("n=3") */
+export interface StackFrame {
+  f: string
+  l: number
+  a: string
+}
+
 export interface Snapshot {
   step: number
   /** 실행 중인 줄 번호 (event가 done이면 -1) */
@@ -33,6 +40,8 @@ export interface Snapshot {
   depth: number
   /** 현재 프레임의 지역 변수 */
   vars: Record<string, CapturedValue>
+  /** F-11 호출 스택 (바깥 → 현재 순, 사용자 프레임만) */
+  stack: StackFrame[]
   /** 이 스텝까지 누적된 stdout 글자 수 */
   out: number
 }

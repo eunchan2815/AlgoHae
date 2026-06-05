@@ -168,6 +168,82 @@ for r in range(1, rows):
 print("경로 수:", grid[rows - 1][cols - 1])
 `,
   },
+  {
+    id: 'binary-search',
+    name: '이진 탐색',
+    enName: 'BINARY SEARCH',
+    desc: '반씩 잘라가며 찾아요 — left·right·mid 포인터를 보세요',
+    time: 'O(log n)',
+    space: 'O(1)',
+    code: `arr = [1, 3, 5, 7, 9, 11, 13, 15]
+target = 11
+left = 0
+right = len(arr) - 1
+found = -1
+while left <= right:
+    mid = (left + right) // 2
+    if arr[mid] == target:
+        found = mid
+        break
+    elif arr[mid] < target:
+        left = mid + 1
+    else:
+        right = mid - 1
+print("위치:", found)
+`,
+  },
+  {
+    id: 'insertion-sort',
+    name: '삽입 정렬',
+    enName: 'INSERTION SORT',
+    desc: '카드 정리하듯 — 앞쪽 정렬된 부분에 끼워 넣어요',
+    time: 'O(n²)',
+    space: 'O(1)',
+    code: `arr = [7, 2, 9, 4, 1]
+for i in range(1, len(arr)):
+    key = arr[i]
+    j = i - 1
+    while j >= 0 and arr[j] > key:
+        arr[j + 1] = arr[j]
+        j -= 1
+    arr[j + 1] = key
+print("정렬 완료:", arr)
+`,
+  },
+  {
+    id: 'hanoi',
+    name: '하노이의 탑 (재귀)',
+    enName: 'HANOI',
+    desc: '재귀 호출이 쌓였다 풀리는 걸 호출 스택 탭에서 보세요',
+    time: 'O(2ⁿ)',
+    space: 'O(n)',
+    code: `def hanoi(n, src, aux, dst):
+    if n == 1:
+        print(src, "->", dst)
+        return
+    hanoi(n - 1, src, dst, aux)
+    print(src, "->", dst)
+    hanoi(n - 1, aux, src, dst)
+
+hanoi(3, "A", "B", "C")
+`,
+  },
+  {
+    id: 'gcd',
+    name: '최대공약수 (재귀)',
+    enName: 'GCD',
+    desc: '유클리드 호제법 — gcd(b, a % b)로 줄여가요',
+    time: 'O(log n)',
+    space: 'O(log n)',
+    code: `def gcd(a, b):
+    if b == 0:
+        return a
+    return gcd(b, a % b)
+
+answer = gcd(48, 18)
+print("최대공약수:", answer)
+`,
+  },
 ]
 
 export const DEFAULT_CODE = EXAMPLES[0].code

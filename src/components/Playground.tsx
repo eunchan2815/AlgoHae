@@ -29,6 +29,7 @@ import VizPanel from './VizPanel'
 import VariableTable from './VariableTable'
 import OutputPanel from './OutputPanel'
 import PlayerControls from './PlayerControls'
+import CallStackPanel from './CallStackPanel'
 
 const FILES_KEY = 'algohae:files' // F-34 멀티 파일 저장
 const ACTIVE_KEY = 'algohae:activeFile'
@@ -92,7 +93,7 @@ function editorLangExtensions(fileName: string): Extension[] {
   }
 }
 
-type PanelTab = 'vars' | 'output'
+type PanelTab = 'vars' | 'output' | 'stack'
 
 type RemoteState =
   | { status: 'idle' }
@@ -895,6 +896,13 @@ export default function Playground() {
               >
                 출력
               </PanelTabBtn>
+              <PanelTabBtn
+                type="button"
+                $active={panelTab === 'stack'}
+                onClick={() => setPanelTab('stack')}
+              >
+                호출 스택
+              </PanelTabBtn>
             </PanelTabs>
             <PanelBody>
               {panelTab === 'vars' ? (
@@ -905,6 +913,16 @@ export default function Playground() {
                     {isPython
                       ? '실행하면 매 스텝의 변수가 여기에 나와요'
                       : '변수 추적은 Python에서 지원해요'}
+                  </PanelEmpty>
+                )
+              ) : panelTab === 'stack' ? (
+                hasPlayback ? (
+                  <CallStackPanel snap={snap} prev={prev} />
+                ) : (
+                  <PanelEmpty>
+                    {isPython
+                      ? '실행하면 함수 호출 스택이 여기에 나와요 — 재귀 예제에서 진가를 발휘해요!'
+                      : '호출 스택은 Python에서 지원해요'}
                   </PanelEmpty>
                 )
               ) : hasPlayback && snap ? (
