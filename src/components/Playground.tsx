@@ -46,7 +46,7 @@ function loadFiles(): UserFile[] {
     const raw = localStorage.getItem(FILES_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as UserFile[]
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed)) return parsed // 빈 배열(파일 0개)도 유효한 상태
     }
   } catch {
     /* 손상된 저장값은 무시 */
@@ -127,7 +127,7 @@ export default function Playground() {
   const [activeId, setActiveId] = useState<string>(() => {
     const saved = localStorage.getItem(ACTIVE_KEY)
     const initial = loadFiles()
-    return initial.some((f) => f.id === saved) ? (saved as string) : initial[0].id
+    return initial.some((f) => f.id === saved) ? (saved as string) : (initial[0]?.id ?? '')
   })
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -147,20 +147,43 @@ export default function Playground() {
   const panelDrag = useRef<{ startY: number; startH: number } | null>(null)
   const [openTabs, setOpenTabs] = useState<string[]>(() => {
     const all = loadFiles()
-    const savedActive = localStorage.getItem(ACTIVE_KEY)
-    const active = all.some((f) => f.id === savedActive) ? (savedActive as string) : all[0].id
-    try {
-      const saved = JSON.parse(localStorage.getItem(TABS_KEY) ?? '[]') as string[]
-      const valid = saved.filter((id) => all.some((f) => f.id === id))
-      if (valid.length) return valid.includes(active) ? valid : [...valid, active]
-    } catch {
-      /* 손상된 저장값은 무시 */
+    const raw = localStorage.getItem(TABS_KEY)
+    if (raw !== null) {
+      try {
+        const saved = JSON.parse(raw) as string[]
+        // 빈 배열(탭 0개)도 유효한 상태 — 그대로 복원
+        if (Array.isArray(saved)) return saved.filter((id) => all.some((f) => f.id === id))
+      } catch {
+        /* 손상된 저장값은 무시 */
+      }
     }
-    return [active]
+    const savedActive = localStorage.getItem(ACTIVE_KEY)
+    const active = all.some((f) => f.id === savedActive) ? (savedActive as string) : all[0]?.id
+    return active ? [active] : []
   })
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [creating, setCreating] = useState(false)
+  // 탐색기 섹션 접기/펼치기 (VS Code 폴더처럼)
+  const [folders, setFolders] = useState<Record<'my' | 'ex' | 'langEx', boolean>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('algohae:folders') ?? '')
+      if (saved && typeof saved === 'object') {
+        return { my: saved.my !== false, ex: saved.ex !== false, langEx: saved.langEx !== false }
+      }
+    } catch {
+      /* 기본값 사용 */
+    }
+    return { my: true, ex: true, langEx: true }
+  })
+
+  const toggleFolder = (key: 'my' | 'ex' | 'langEx') => {
+    setFolders((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      localStorage.setItem('algohae:folders', JSON.stringify(next))
+      return next
+    })
+  }
   const [newName, setNewName] = useState('')
   const [remote, setRemote] = useState<RemoteState>({ status: 'idle' })
   const remoteAbort = useRef<AbortController | null>(null)
@@ -193,9 +216,15 @@ export default function Playground() {
     localStorage.setItem('algohae:theme', id)
   }
 
-  const activeFile = files.find((f) => f.id === activeId) ?? files[0]
-  const code = activeFile.content
-  const lang = langOf(activeFile.name)
+  // 탭이 하나도 없으면 빈 에디터 상태 (VS Code와 동일)
+  const activeFile =
+    openTabs.length > 0
+      ? (files.find((f) => f.id === activeId) ??
+        files.find((f) => f.id === openTabs[openTabs.length - 1]) ??
+        null)
+      : null
+  const code = activeFile?.content ?? ''
+  const lang = activeFile ? langOf(activeFile.name) : null
   const isPython = lang?.traced === true
   // 내용이 예제와 일치하면 예제 메타(제목·복잡도) 사용 — 파생값
   const activeExample = EXAMPLES.find((ex) => ex.code === code) ?? null
@@ -210,19 +239,19 @@ export default function Playground() {
 
   // 브라우저 탭 제목 = 현재 파일 (타이틀바 제거 대체)
   useEffect(() => {
-    document.title = `${activeFile.name} — 알고해`
-  }, [activeFile.name])
+    document.title = activeFile ? `${activeFile.name} — 알고해` : '알고해'
+  }, [activeFile])
 
   // Cmd+W / Ctrl+W / Alt+W → 탭 닫기 (Cmd+W는 브라우저가 가로챌 수 있어 Alt+W 병행)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'KeyW' && (e.metaKey || e.ctrlKey || e.altKey)) {
         e.preventDefault()
-        if (openTabs.length > 1) {
-          const next = openTabs.filter((t) => t !== activeId)
-          setOpenTabs(next)
-          localStorage.setItem(TABS_KEY, JSON.stringify(next))
-          const fallback = next[next.length - 1]
+        const next = openTabs.filter((t) => t !== activeId)
+        setOpenTabs(next)
+        localStorage.setItem(TABS_KEY, JSON.stringify(next))
+        const fallback = next[next.length - 1]
+        if (fallback) {
           setActiveId(fallback)
           localStorage.setItem(ACTIVE_KEY, fallback)
         }
@@ -303,6 +332,7 @@ export default function Playground() {
   }
 
   const handleCodeChange = (value: string) => {
+    if (!activeFile) return
     updateFiles(files.map((f) => (f.id === activeFile.id ? { ...f, content: value } : f)))
     // 코드가 바뀌면 이전 실행 결과는 무효
     if (result || remote.status !== 'idle') clearRunState()
@@ -323,13 +353,14 @@ export default function Playground() {
   }
 
   const closeTab = (id: string) => {
-    if (openTabs.length <= 1) return // 마지막 탭은 닫지 않는다
     const next = openTabs.filter((t) => t !== id)
     persistTabs(next)
     if (id === activeId) {
       const fallback = next[next.length - 1]
-      setActiveId(fallback)
-      localStorage.setItem(ACTIVE_KEY, fallback)
+      if (fallback) {
+        setActiveId(fallback)
+        localStorage.setItem(ACTIVE_KEY, fallback)
+      }
       clearRunState()
     }
   }
@@ -374,15 +405,16 @@ export default function Playground() {
   }
 
   const deleteFile = (id: string) => {
-    if (files.length <= 1) return
     const next = files.filter((f) => f.id !== id)
     updateFiles(next)
     const nextTabs = openTabs.filter((t) => t !== id)
-    persistTabs(nextTabs.length ? nextTabs : [next[0].id])
+    persistTabs(nextTabs)
     if (id === activeId) {
-      const fallback = nextTabs[nextTabs.length - 1] ?? next[0].id
-      setActiveId(fallback)
-      localStorage.setItem(ACTIVE_KEY, fallback)
+      const fallback = nextTabs[nextTabs.length - 1]
+      if (fallback) {
+        setActiveId(fallback)
+        localStorage.setItem(ACTIVE_KEY, fallback)
+      }
       clearRunState()
     }
   }
@@ -428,6 +460,7 @@ export default function Playground() {
 
   const handleRun = () => {
     setEditNotice(null)
+    if (!activeFile) return
     if (!lang) {
       setEditNotice(`이 파일은 실행할 수 없어요 — 지원 확장자: py, js, ts, java, cpp, cs, kt, swift, rs, rb`)
       return
@@ -470,7 +503,8 @@ export default function Playground() {
     : null
   const hasPlayback = isPython && result !== null && !startFailed && snap !== undefined
   const isRunning = isPython ? runner.status === 'running' : remote.status === 'running'
-  const runDisabled = isPython ? runner.status !== 'ready' : remote.status === 'running'
+  const runDisabled =
+    !activeFile || (isPython ? runner.status !== 'ready' : remote.status === 'running')
 
   const notice =
     editNotice ??
@@ -558,12 +592,16 @@ export default function Playground() {
           <SideBar>
             <SideBarTitle>탐색기</SideBarTitle>
 
-            <SideBarSection>
+            <SideBarSection onClick={() => toggleFolder('my')}>
+              <Chev $open={folders.my} aria-hidden="true">▸</Chev>
               내 파일
+              <HeadSpacer />
               <NewFileBtn
                 type="button"
                 title="새 파일"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFolders((prev) => ({ ...prev, my: true }))
                   setCreating(true)
                   setNewName('')
                 }}
@@ -571,11 +609,15 @@ export default function Playground() {
                 <NewFileIcon />
               </NewFileBtn>
             </SideBarSection>
+            {folders.my && (
             <FileList>
+              {files.length === 0 && !creating && (
+                <EmptyFiles>파일이 없어요 — 위 + 버튼으로 만들어보세요</EmptyFiles>
+              )}
               {files.map((file) => {
                 const fileLang = langOf(file.name)
                 return (
-                  <FileItem key={file.id} $active={file.id === activeFile.id}>
+                  <FileItem key={file.id} $active={file.id === activeFile?.id}>
                     {renamingId === file.id ? (
                       <RenameRow>
                         <input
@@ -595,7 +637,7 @@ export default function Playground() {
                       onClick={() => selectFile(file.id)}
                       onDoubleClick={() => startRename(file)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && file.id === activeFile.id) {
+                        if (e.key === 'Enter' && file.id === activeFile?.id) {
                           e.preventDefault()
                           startRename(file)
                         }
@@ -606,15 +648,13 @@ export default function Playground() {
                       {file.name}
                     </FileButton>
                     )}
-                    {files.length > 1 && (
-                      <FileDelete
-                        type="button"
-                        title="파일 삭제"
-                        onClick={() => deleteFile(file.id)}
-                      >
-                        <CloseIcon />
-                      </FileDelete>
-                    )}
+                    <FileDelete
+                      type="button"
+                      title="파일 삭제"
+                      onClick={() => deleteFile(file.id)}
+                    >
+                      <CloseIcon />
+                    </FileDelete>
                   </FileItem>
                 )
               })}
@@ -634,8 +674,13 @@ export default function Playground() {
                 </NewFileRow>
               )}
             </FileList>
+            )}
 
-            <SideBarSection>예제</SideBarSection>
+            <SideBarSection onClick={() => toggleFolder('ex')}>
+              <Chev $open={folders.ex} aria-hidden="true">▸</Chev>
+              예제
+            </SideBarSection>
+            {folders.ex && (
             <FileList>
               {EXAMPLES.map((ex) => (
                 <FileItem key={ex.id} $active={false}>
@@ -650,8 +695,13 @@ export default function Playground() {
                 </FileItem>
               ))}
             </FileList>
+            )}
 
-            <SideBarSection>언어 예제</SideBarSection>
+            <SideBarSection onClick={() => toggleFolder('langEx')}>
+              <Chev $open={folders.langEx} aria-hidden="true">▸</Chev>
+              언어 예제
+            </SideBarSection>
+            {folders.langEx && (
             <FileList>
               {LANG_EXAMPLES.map((le) => (
                 <FileItem key={le.name} $active={false}>
@@ -666,6 +716,7 @@ export default function Playground() {
                 </FileItem>
               ))}
             </FileList>
+            )}
           </SideBar>
         )}
 
@@ -688,8 +739,8 @@ export default function Playground() {
                   return (
                     <Tab
                       key={tabId}
-                      ref={tabId === activeFile.id ? activeTabRef : undefined}
-                      $active={tabId === activeFile.id}
+                      ref={tabId === activeFile?.id ? activeTabRef : undefined}
+                      $active={tabId === activeFile?.id}
                       onClick={() => selectFile(tabId)}
                     >
                       <img src={tabLang?.logo ?? pythonLogo} alt="" width={14} height={14} />
@@ -697,7 +748,6 @@ export default function Playground() {
                       <TabClose
                         type="button"
                         title="탭 닫기 (⌥W 또는 Ctrl+W)"
-                        $hidden={openTabs.length <= 1}
                         onClick={(e) => {
                           e.stopPropagation()
                           closeTab(tabId)
@@ -724,20 +774,28 @@ export default function Playground() {
                   </RunAction>
                 )}
               </TabsBar>
-              <Breadcrumbs>ALGOHAE › {activeFile.name}</Breadcrumbs>
+              <Breadcrumbs>{activeFile ? `ALGOHAE › ${activeFile.name}` : '\u00a0'}</Breadcrumbs>
               <EditorHost>
-                <CodeMirror
-                  key={activeFile.id}
-                  value={code}
-                  onChange={handleCodeChange}
-                  theme={editorTheme.theme}
-                  extensions={editorLangExtensions(activeFile.name)}
-                  height="100%"
-                  style={{ height: '100%' }}
-                  onCreateEditor={(view) => {
-                    editorRef.current = view
-                  }}
-                />
+                {activeFile ? (
+                  <CodeMirror
+                    key={activeFile.id}
+                    value={code}
+                    onChange={handleCodeChange}
+                    theme={editorTheme.theme}
+                    extensions={editorLangExtensions(activeFile.name)}
+                    height="100%"
+                    style={{ height: '100%' }}
+                    onCreateEditor={(view) => {
+                      editorRef.current = view
+                    }}
+                  />
+                ) : (
+                  <EmptyEditor>
+                    <span>{'</>'}</span>
+                    <p>열린 파일이 없어요</p>
+                    <small>왼쪽 탐색기에서 파일을 선택하거나 새 파일을 만들어보세요</small>
+                  </EmptyEditor>
+                )}
               </EditorHost>
             </EditorGroup>
 
@@ -776,7 +834,9 @@ export default function Playground() {
                 ) : (
                   <Placeholder>
                     <span>▷</span>
-                    {isPython ? (
+                    {!activeFile ? (
+                      <p>파일을 열고 실행하면 여기에 시각화가 나와요</p>
+                    ) : isPython ? (
                       <p>
                         실행하면 코드가 한 줄씩 재생되고,
                         <br />
@@ -850,7 +910,8 @@ export default function Playground() {
                     <PanelEmpty>출력 없이 종료됐어요 (종료 코드 {remote.out.exitCode ?? '?'})</PanelEmpty>
                   )}
                   {/* JVM 계열 실행 서버는 한글 stdout이 ?로 깨짐 — 서버 측 인코딩 한계 */}
-                  {(extOf(activeFile.name) === 'java' || extOf(activeFile.name) === 'kt') &&
+                  {activeFile !== null &&
+                    (extOf(activeFile.name) === 'java' || extOf(activeFile.name) === 'kt') &&
                     remote.out.stdout.includes('?') && (
                       <Hint>💡 Java·Kotlin 실행 서버는 한글 출력이 ?로 깨질 수 있어요 (영문·숫자는 정상)</Hint>
                     )}
@@ -872,7 +933,9 @@ export default function Playground() {
       {/* ── 상태 바 (VS Code 블루) ── */}
       <StatusBar>
         <StatusItem>
-          {isPython ? (
+          {!activeFile ? (
+            '탐색기에서 파일을 열어보세요'
+          ) : isPython ? (
             <>
               {runner.status === 'boot' && '⏳ 파이썬 실행 환경 준비 중 (최초 1회)'}
               {runner.status === 'ready' && '✓ 실행 준비 완료'}
@@ -893,9 +956,11 @@ export default function Playground() {
             스텝 {step + 1}/{total}
           </StatusItem>
         )}
-        <StatusItem>줄 {codeLines.length}</StatusItem>
+        {activeFile && <StatusItem>줄 {codeLines.length}</StatusItem>}
         <StatusItem>UTF-8</StatusItem>
-        <StatusItem>{isPython ? 'Python (Pyodide)' : (lang?.name ?? '텍스트')}</StatusItem>
+        {activeFile && (
+          <StatusItem>{isPython ? 'Python (Pyodide)' : (lang?.name ?? '텍스트')}</StatusItem>
+        )}
       </StatusBar>
     </Wrap>
   )
@@ -993,12 +1058,38 @@ const SideBarTitle = styled.div`
 const SideBarSection = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px 5px 18px;
+  gap: 5px;
+  padding: 7px 12px 5px 8px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
   color: ${VS.text};
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: ${VS.listHover};
+  }
+`
+
+const Chev = styled.span<{ $open: boolean }>`
+  display: inline-flex;
+  width: 12px;
+  justify-content: center;
+  font-size: 10px;
+  color: ${VS.textDim};
+  transform: rotate(${({ $open }) => ($open ? '90deg' : '0deg')});
+  transition: transform 0.15s ease;
+`
+
+const HeadSpacer = styled.span`
+  flex: 1;
+`
+
+const EmptyFiles = styled.p`
+  margin: 4px 18px 8px 26px;
+  font-size: 12px;
+  color: ${VS.textDim};
 `
 
 const NewFileBtn = styled.button`
@@ -1210,7 +1301,7 @@ const Tab = styled.div<{ $active?: boolean }>`
   white-space: nowrap;
 `
 
-const TabClose = styled.button<{ $hidden?: boolean }>`
+const TabClose = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1222,7 +1313,6 @@ const TabClose = styled.button<{ $hidden?: boolean }>`
   background: none;
   color: var(--vs-text-dim);
   cursor: pointer;
-  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 
   &:hover {
     background: ${VS.listHover};
@@ -1306,6 +1396,35 @@ const EditorHost = styled.div`
   .cm-editor {
     height: 100%;
     font-size: 15px;
+  }
+`
+
+const EmptyEditor = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  span {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--vs-list-active);
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: ${VS.textDim};
+  }
+
+  small {
+    font-size: 12.5px;
+    color: ${VS.textDim};
+    opacity: 0.8;
   }
 `
 
