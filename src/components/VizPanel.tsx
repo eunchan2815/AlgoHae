@@ -355,12 +355,7 @@ export default function VizPanel({ snap, prev, currentLineText }: Props) {
 
     sections.push(
       <Group key={name}>
-        <VarName>
-          {name}
-          {kind === 'stack' && <KindTag>스택</KindTag>}
-          {kind === 'queue' && <KindTag>큐</KindTag>}
-          {kind === 'tree' && <KindTag>트리</KindTag>}
-        </VarName>
+        <VarName>{name}</VarName>
         {kind === 'boxes' && (
           <BoxesViz name={name} items={items} prevItems={prevItems} accessed={accessed} step={snap.step} />
         )}
@@ -413,16 +408,6 @@ const VarName = styled.span`
   font-family: ${theme.mono};
   font-size: 12.5px;
   color: var(--vs-text-dim, ${theme.subtext});
-`
-
-const KindTag = styled.span`
-  padding: 1px 7px;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 999px;
-  color: var(--vs-accent, ${theme.teal});
-  border: 1px solid var(--vs-accent, ${theme.teal});
-  opacity: 0.85;
 `
 
 const BoxRow = styled.div`

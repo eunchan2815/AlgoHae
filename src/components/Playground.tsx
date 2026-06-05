@@ -1280,6 +1280,7 @@ const EditorRow = styled.div`
 
 const EditorGroup = styled.div`
   min-width: 0;
+  min-height: 0; /* 그리드 행 높이를 넘지 않게 — 없으면 긴 코드가 행을 뚫고 자란다 */
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--vs-border);
@@ -1287,6 +1288,7 @@ const EditorGroup = styled.div`
 
 const VizGroup = styled.div`
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: ${VS.editor};
@@ -1406,9 +1408,18 @@ const EditorHost = styled.div`
   min-height: 0;
   overflow: hidden;
 
+  /* @uiw/react-codemirror 래퍼까지 높이 체인을 이어줘야 내부 스크롤이 생긴다 */
+  > div {
+    height: 100%;
+  }
+
   .cm-editor {
     height: 100%;
     font-size: 15px;
+  }
+
+  .cm-scroller {
+    overflow: auto;
   }
 `
 
