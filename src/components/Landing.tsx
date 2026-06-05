@@ -411,9 +411,6 @@ const FloatingNav = styled.nav<{ $visible: boolean }>`
 `
 
 const FloatLogo = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 7px;
   border: none;
   background: none;
   padding: 0;
