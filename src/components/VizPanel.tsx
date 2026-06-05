@@ -1,9 +1,9 @@
-// 특화 레이어 — F-17 리스트 → 박스열 (레퍼런스 스타일)
-// 현재 줄이 접근 중인 원소를 파랑/골드 글로우로 하이라이트 + 자리가 바뀐 박스는 슬라이드 애니메이션
-import type { CSSProperties } from 'react'
+// 특화 레이어 — 타입 태그별 렌더러 분기 (명세서 "하나의 스냅샷, 두 가지 렌더링")
+// F-17 리스트 → 박스열 / F-19 스택·큐 / F-20 트리 노드 그래프
+import type { CSSProperties, ReactNode } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { theme } from '../styles/theme'
-import type { CapturedValue, Snapshot } from '../types/snapshot'
+import type { CapturedValue, Snapshot, TreeNode } from '../types/snapshot'
 
 interface Props {
   snap: Snapshot
@@ -17,13 +17,21 @@ type Ring = 'teal' | 'gold' | 'none'
 /** 박스 한 칸의 가로 이동 거리 (min-width 46 + gap 11) */
 const BOX_STEP = 57
 
-/** 박스열로 그릴 수 있는 리스트인가 — 원소가 전부 스칼라 */
-function isBoxable(value: CapturedValue): boolean {
-  return (
-    value.t === 'list' &&
-    Array.isArray(value.v) &&
-    (value.v as CapturedValue[]).every((item) => item.t === 'scalar')
-  )
+/** 원소가 전부 스칼라인 시퀀스인가 */
+function scalarItems(value: CapturedValue): CapturedValue[] | null {
+  if ((value.t !== 'list' && value.t !== 'deque') || !Array.isArray(value.v)) return null
+  const items = value.v as CapturedValue[]
+  return items.every((item) => item.t === 'scalar') ? items : null
+}
+
+/** 어떤 렌더러를 쓸까 — 타입 태그 + 변수명 휴리스틱 (F-19) */
+function pickRenderer(name: string, value: CapturedValue): 'boxes' | 'stack' | 'queue' | 'tree' | null {
+  if (value.t === 'tree') return 'tree'
+  if (scalarItems(value) === null) return null
+  if (value.t === 'deque') return 'queue'
+  if (/stack|스택/i.test(name)) return 'stack'
+  if (/queue|큐/i.test(name)) return 'queue'
+  return 'boxes'
 }
 
 /** 현재 줄에서 `name[i]`, `name[i + 1]`, `name[0]` 패턴을 찾아 인덱스로 해석 */
@@ -50,20 +58,15 @@ function accessedIndices(
   return found
 }
 
-/**
- * 각 위치의 값이 직전 스냅샷의 어디에서 왔는지 추적 (FLIP 애니메이션용).
- * 값이 같은 자리에 그대로면 null, 이동해 왔으면 출발 인덱스.
- */
+/** 각 위치의 값이 직전 스냅샷의 어디에서 왔는지 추적 (FLIP 애니메이션용) */
 function fromIndices(prevItems: CapturedValue[] | null, items: CapturedValue[]): (number | null)[] {
   if (!prevItems) return items.map(() => null)
   const used = new Set<number>()
   const cur = items.map((item) => JSON.stringify(item))
   const old = prevItems.map((item) => JSON.stringify(item))
-  // 1차: 안 움직인 값이 자기 자리를 먼저 차지
   items.forEach((_, i) => {
     if (old[i] === cur[i]) used.add(i)
   })
-  // 2차: 움직인 값은 가장 가까운 같은 값의 옛 위치와 매칭
   return items.map((_, i) => {
     if (old[i] === cur[i]) return null
     let best: number | null = null
@@ -76,67 +79,256 @@ function fromIndices(prevItems: CapturedValue[] | null, items: CapturedValue[]):
   })
 }
 
-export default function VizPanel({ snap, prev, currentLineText }: Props) {
-  const boxLists = Object.entries(snap.vars).filter(([, value]) => isBoxable(value))
+function ringFor(i: number, accessed: number[], changed: boolean): Ring {
+  let ring: Ring = 'none'
+  if (accessed[0] === i) ring = 'teal'
+  if (accessed[1] === i || changed) ring = 'gold'
+  return ring
+}
 
-  if (boxLists.length === 0) {
-    return <Empty>리스트 변수가 생기면 여기에 박스로 그려져요</Empty>
-  }
+// ── F-17 박스열 ──
 
+function BoxesViz({
+  name,
+  items,
+  prevItems,
+  accessed,
+  step,
+}: {
+  name: string
+  items: CapturedValue[]
+  prevItems: CapturedValue[] | null
+  accessed: number[]
+  step: number
+}) {
+  const origins = fromIndices(prevItems, items)
   return (
-    <Panel>
-      {boxLists.map(([name, value]) => {
-        const items = value.v as CapturedValue[]
-        const prevValue = prev?.vars[name]
-        const prevItems =
-          prevValue && isBoxable(prevValue) ? (prevValue.v as CapturedValue[]) : null
-        const accessed = accessedIndices(name, currentLineText, snap.vars)
-        const origins = fromIndices(prevItems, items)
-
+    <BoxRow>
+      {items.map((item, i) => {
+        const changed = prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
+        const from = origins[i]
         return (
-          <Group key={name}>
-            {boxLists.length > 1 && <VarName>{name}</VarName>}
-            <BoxRow>
-              {items.map((item, i) => {
-                const changed =
-                  prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
-                // 레퍼런스: 비교 쌍의 첫 번째는 파랑, 두 번째는 골드. 값이 바뀐 원소도 골드
-                let ring: Ring = 'none'
-                if (accessed[0] === i) ring = 'teal'
-                if (accessed[1] === i || changed) ring = 'gold'
-                const from = origins[i]
-                return (
-                  <Box
-                    // 스텝마다 key가 바뀌어 이동 애니메이션이 다시 실행된다
-                    key={`${snap.step}-${i}`}
-                    $ring={ring}
-                    $moved={from !== null}
-                    style={
-                      from !== null
-                        ? ({ '--dx': `${(from - i) * BOX_STEP}px` } as CSSProperties)
-                        : undefined
-                    }
-                  >
-                    {String(item.v)}
-                  </Box>
-                )
-              })}
-              {value.len !== undefined && value.len > items.length && (
-                <Ellipsis>… 전체 {value.len}개</Ellipsis>
-              )}
-            </BoxRow>
-          </Group>
+          <Box
+            key={`${step}-${name}-${i}`}
+            $ring={ringFor(i, accessed, changed)}
+            $moved={from !== null}
+            style={
+              from !== null ? ({ '--dx': `${(from - i) * BOX_STEP}px` } as CSSProperties) : undefined
+            }
+          >
+            {String(item.v)}
+          </Box>
         )
       })}
-    </Panel>
+    </BoxRow>
   )
 }
+
+// ── F-19 스택 (세로 쌓기, 위가 top) ──
+
+function StackViz({
+  items,
+  prevItems,
+  step,
+  name,
+}: {
+  items: CapturedValue[]
+  prevItems: CapturedValue[] | null
+  step: number
+  name: string
+}) {
+  const pushed = prevItems !== null && items.length > prevItems.length
+  const reversed = [...items].reverse() // 마지막 원소(top)가 위로
+  return (
+    <StackWrap>
+      <StackCol>
+        {reversed.map((item, idx) => {
+          const i = items.length - 1 - idx
+          const isTop = i === items.length - 1
+          const changed =
+            prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
+          return (
+            <StackBoxRow key={`${step}-${name}-${i}`}>
+              <StackBox $ring={changed ? 'gold' : 'none'} $drop={isTop && pushed}>
+                {String(item.v)}
+              </StackBox>
+              {isTop && <TopLabel>← top</TopLabel>}
+            </StackBoxRow>
+          )
+        })}
+        {items.length === 0 && <EmptyHint>(빈 스택)</EmptyHint>}
+        <StackBase />
+      </StackCol>
+    </StackWrap>
+  )
+}
+
+// ── F-19 큐 (가로, front → rear) ──
+
+function QueueViz({
+  items,
+  prevItems,
+  step,
+  name,
+}: {
+  items: CapturedValue[]
+  prevItems: CapturedValue[] | null
+  step: number
+  name: string
+}) {
+  const origins = fromIndices(prevItems, items)
+  return (
+    <QueueWrap>
+      <EdgeLabel>front →</EdgeLabel>
+      <BoxRow>
+        {items.length === 0 && <EmptyHint>(빈 큐)</EmptyHint>}
+        {items.map((item, i) => {
+          const changed =
+            prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
+          const from = origins[i]
+          return (
+            <Box
+              key={`${step}-${name}-${i}`}
+              $ring={changed ? 'gold' : 'none'}
+              $moved={from !== null}
+              style={
+                from !== null
+                  ? ({ '--dx': `${(from - i) * BOX_STEP}px` } as CSSProperties)
+                  : undefined
+              }
+            >
+              {String(item.v)}
+            </Box>
+          )
+        })}
+      </BoxRow>
+      <EdgeLabel>← rear</EdgeLabel>
+    </QueueWrap>
+  )
+}
+
+// ── F-20 트리 (SVG 노드 그래프, in-order 가로 배치) ──
+
+const NODE_W = 46
+const LEVEL_H = 58
+
+/** in-order 순회 순서를 x 좌표로 — 부모가 항상 두 자식 사이에 놓여 균형 잡힌 모양 */
+function layoutTree(root: TreeNode) {
+  const nodes: { x: number; y: number; v: number | string }[] = []
+  const edges: { x1: number; y1: number; x2: number; y2: number }[] = []
+  let cursor = 0
+  let maxDepth = 0
+
+  function walk(node: TreeNode, depth: number): { x: number; y: number } {
+    maxDepth = Math.max(maxDepth, depth)
+    const left = node.l ? walk(node.l, depth + 1) : null
+    const x = cursor * NODE_W + NODE_W / 2
+    cursor += 1
+    const y = depth * LEVEL_H + 26
+    const right = node.r ? walk(node.r, depth + 1) : null
+    nodes.push({ x, y, v: node.v })
+    if (left) edges.push({ x1: x, y1: y, x2: left.x, y2: left.y })
+    if (right) edges.push({ x1: x, y1: y, x2: right.x, y2: right.y })
+    return { x, y }
+  }
+
+  walk(root, 0)
+  return { nodes, edges, width: cursor * NODE_W, height: (maxDepth + 1) * LEVEL_H + 8 }
+}
+
+function TreeViz({ root }: { root: TreeNode }) {
+  const laid = layoutTree(root)
+  return (
+    <TreeScroll>
+      <svg width={laid.width} height={laid.height}>
+        {laid.edges.map((e, i) => (
+          <line
+            key={i}
+            x1={e.x1}
+            y1={e.y1}
+            x2={e.x2}
+            y2={e.y2}
+            stroke="var(--vs-border, #2c3434)"
+            strokeWidth={1.5}
+          />
+        ))}
+        {laid.nodes.map((n, i) => (
+          <g key={i}>
+            <circle
+              cx={n.x}
+              cy={n.y}
+              r={17}
+              fill="var(--vs-list-hover, #141716)"
+              stroke="var(--vs-accent, #0088ff)"
+              strokeWidth={1.8}
+            />
+            <text
+              x={n.x}
+              y={n.y + 4.5}
+              textAnchor="middle"
+              fontSize={13}
+              fontFamily="SF Mono, Menlo, monospace"
+              fontWeight={600}
+              fill="var(--vs-text, #d8d8d8)"
+            >
+              {String(n.v).slice(0, 4)}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </TreeScroll>
+  )
+}
+
+// ── 메인: 변수별로 렌더러 분기 ──
+
+export default function VizPanel({ snap, prev, currentLineText }: Props) {
+  const sections: ReactNode[] = []
+
+  for (const [name, value] of Object.entries(snap.vars)) {
+    const kind = pickRenderer(name, value)
+    if (!kind) continue
+    const prevValue = prev?.vars[name]
+    const items = scalarItems(value) ?? []
+    const prevItems = prevValue ? scalarItems(prevValue) : null
+    const accessed = accessedIndices(name, currentLineText, snap.vars)
+
+    sections.push(
+      <Group key={name}>
+        <VarName>
+          {name}
+          {kind === 'stack' && <KindTag>스택</KindTag>}
+          {kind === 'queue' && <KindTag>큐</KindTag>}
+          {kind === 'tree' && <KindTag>트리</KindTag>}
+        </VarName>
+        {kind === 'boxes' && (
+          <BoxesViz name={name} items={items} prevItems={prevItems} accessed={accessed} step={snap.step} />
+        )}
+        {kind === 'stack' && (
+          <StackViz name={name} items={items} prevItems={prevItems} step={snap.step} />
+        )}
+        {kind === 'queue' && (
+          <QueueViz name={name} items={items} prevItems={prevItems} step={snap.step} />
+        )}
+        {kind === 'tree' && value.v !== null && <TreeViz root={value.v as TreeNode} />}
+      </Group>,
+    )
+  }
+
+  if (sections.length === 0) {
+    return <Empty>리스트·스택·큐·트리 변수가 생기면 여기에 그려져요</Empty>
+  }
+
+  return <Panel>{sections}</Panel>
+}
+
+// ── 스타일 ──
 
 const Panel = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 26px;
 `
 
 const Empty = styled.p`
@@ -155,9 +347,22 @@ const Group = styled.div`
 `
 
 const VarName = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: ${theme.mono};
   font-size: 12.5px;
   color: var(--vs-text-dim, ${theme.subtext});
+`
+
+const KindTag = styled.span`
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  color: var(--vs-accent, ${theme.teal});
+  border: 1px solid var(--vs-accent, ${theme.teal});
+  opacity: 0.85;
 `
 
 const BoxRow = styled.div`
@@ -180,13 +385,23 @@ const RING_GLOW: Record<Ring, string> = {
   none: 'none',
 }
 
-// 출발 위치(--dx)에서 제자리로 미끄러져 들어온다
 const slideIn = keyframes`
   from {
     transform: translateX(var(--dx, 0));
   }
   to {
     transform: translateX(0);
+  }
+`
+
+const dropIn = keyframes`
+  from {
+    transform: translateY(-26px);
+    opacity: 0.2;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 `
 
@@ -211,7 +426,84 @@ const Box = styled.div<{ $ring: Ring; $moved: boolean }>`
   z-index: ${({ $moved }) => ($moved ? 1 : 0)};
 `
 
-const Ellipsis = styled.span`
-  color: ${theme.subtext};
-  font-size: 12px;
+// 스택
+
+const StackWrap = styled.div`
+  display: flex;
+  justify-content: center;
+`
+
+const StackCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+`
+
+const StackBoxRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+const StackBox = styled.div<{ $ring: Ring; $drop: boolean }>`
+  min-width: 86px;
+  height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ${theme.mono};
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: var(--vs-list-hover, #141716);
+  border: 2px solid ${({ $ring }) => RING_COLOR[$ring]};
+  color: var(--vs-text, #d8d8d8);
+  box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
+  animation: ${({ $drop }) => ($drop ? dropIn : 'none')} 0.3s ease;
+`
+
+const StackBase = styled.div`
+  width: 110px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--vs-text-dim, #555);
+  opacity: 0.6;
+`
+
+const TopLabel = styled.span`
+  font-family: ${theme.mono};
+  font-size: 11.5px;
+  color: var(--vs-accent, ${theme.teal});
+  white-space: nowrap;
+`
+
+// 큐
+
+const QueueWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+const EdgeLabel = styled.span`
+  font-family: ${theme.mono};
+  font-size: 11.5px;
+  color: var(--vs-accent, ${theme.teal});
+  white-space: nowrap;
+`
+
+const EmptyHint = styled.span`
+  font-size: 12.5px;
+  color: var(--vs-text-dim, ${theme.subtext});
+`
+
+// 트리
+
+const TreeScroll = styled.div`
+  max-width: 100%;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
 `

@@ -1,15 +1,22 @@
 // 명세서 4장 — 공통 데이터 계약 (하나의 스냅샷, 두 가지 렌더링)
 
-export type TypeTag = 'scalar' | 'list' | 'dict' | 'opaque'
+export type TypeTag = 'scalar' | 'list' | 'dict' | 'deque' | 'tree' | 'opaque'
+
+/** F-20 이진 트리 노드 (tracer가 left/right 속성 객체를 직렬화한 결과) */
+export interface TreeNode {
+  v: number | string
+  l: TreeNode | null
+  r: TreeNode | null
+}
 
 export interface CapturedValue {
   /** 타입 태그 — 특화 렌더러 분기 기준 */
   t: TypeTag
   /** 값 — 타입에 따라 형태가 다름 */
-  v: number | string | CapturedValue[] | [string, CapturedValue][]
+  v: number | string | CapturedValue[] | [string, CapturedValue][] | TreeNode | null
   /** 리스트일 때: 전부 숫자인지 (막대 렌더 가능 판단) */
   num?: boolean
-  /** 리스트·딕셔너리의 원본 길이 (축약 시 표시용) */
+  /** 리스트·딕셔너리·덱의 원본 길이 (축약 시 표시용) */
   len?: number
 }
 

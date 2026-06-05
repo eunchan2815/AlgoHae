@@ -4,16 +4,59 @@
 import sys
 import json
 import types
+import collections
 from io import StringIO
 
-MAX_STEPS = 4000   # F-10 무한루프 방어 ①
-MAX_LEN = 100      # 직렬화 규칙: 컬렉션 길이 제한 (명세서 4.3)
-MAX_DEPTH = 3      # 직렬화 규칙: 중첩 깊이 제한
-MAX_REPR = 120     # 직렬화 규칙: repr 축약
+MAX_STEPS = 4000      # F-10 무한루프 방어 ①
+MAX_LEN = 100         # 직렬화 규칙: 컬렉션 길이 제한 (명세서 4.3)
+MAX_DEPTH = 3         # 직렬화 규칙: 중첩 깊이 제한
+MAX_REPR = 120        # 직렬화 규칙: repr 축약
+MAX_TREE_DEPTH = 6    # F-20 트리 직렬화 깊이 제한
+MAX_TREE_NODES = 63   # F-20 트리 노드 수 제한
 
 
 class _StepLimit(Exception):
     pass
+
+
+def _is_tree_node(val):
+    """F-20: left/right 속성을 가진 사용자 객체 = 이진 트리 노드로 간주"""
+    if isinstance(val, type) or not hasattr(val, "__dict__"):
+        return False
+    has_children = hasattr(val, "left") and hasattr(val, "right")
+    has_value = hasattr(val, "val") or hasattr(val, "value") or hasattr(val, "data")
+    return has_children and has_value
+
+
+def _node_value(node):
+    for attr in ("val", "value", "data"):
+        if hasattr(node, attr):
+            v = getattr(node, attr)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return v
+            return str(v)[:30]
+    return "?"
+
+
+def _capture_tree(node, depth, seen, count):
+    """이진 트리를 {v, l, r} 중첩 구조로 직렬화 (순환·깊이·노드 수 방어)"""
+    if node is None:
+        return None
+    if depth > MAX_TREE_DEPTH or id(node) in seen or count[0] >= MAX_TREE_NODES:
+        return {"v": "…", "l": None, "r": None}
+    seen.add(id(node))
+    count[0] += 1
+    left = getattr(node, "left", None)
+    right = getattr(node, "right", None)
+    return {
+        "v": _node_value(node),
+        "l": _capture_tree(left, depth + 1, seen, count) if _is_tree_node_or_none(left) else None,
+        "r": _capture_tree(right, depth + 1, seen, count) if _is_tree_node_or_none(right) else None,
+    }
+
+
+def _is_tree_node_or_none(val):
+    return val is not None and _is_tree_node(val)
 
 
 def _capture(val, depth=0):
@@ -44,6 +87,13 @@ def _capture(val, depth=0):
     if isinstance(val, (set, frozenset)):
         items = [_capture(x, depth + 1) for x in list(val)[:MAX_LEN]]
         return {"t": "list", "v": items, "num": False, "len": len(val)}
+    # F-19: collections.deque → 큐 렌더러
+    if isinstance(val, collections.deque):
+        items = [_capture(x, depth + 1) for x in list(val)[:MAX_LEN]]
+        return {"t": "deque", "v": items, "len": len(val)}
+    # F-20: left/right 가진 객체 → 트리 렌더러
+    if _is_tree_node(val):
+        return {"t": "tree", "v": _capture_tree(val, 0, set(), [0])}
     try:
         r = repr(val)
     except Exception:

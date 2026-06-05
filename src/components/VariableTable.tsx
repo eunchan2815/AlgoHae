@@ -12,14 +12,28 @@ const TYPE_LABEL: Record<CapturedValue['t'], string> = {
   scalar: '값',
   list: '리스트',
   dict: '딕셔너리',
+  deque: '큐 (deque)',
+  tree: '트리',
   opaque: '객체',
+}
+
+function countTreeNodes(node: { l: unknown; r: unknown } | null): number {
+  if (!node) return 0
+  return (
+    1 +
+    countTreeNodes(node.l as { l: unknown; r: unknown } | null) +
+    countTreeNodes(node.r as { l: unknown; r: unknown } | null)
+  )
 }
 
 function formatValue(value: CapturedValue): string {
   if (value.t === 'scalar' || value.t === 'opaque') {
     return String(value.v)
   }
-  if (value.t === 'list') {
+  if (value.t === 'tree') {
+    return `노드 ${countTreeNodes(value.v as { l: unknown; r: unknown } | null)}개`
+  }
+  if (value.t === 'list' || value.t === 'deque') {
     const items = value.v as CapturedValue[]
     const body = items.map(formatValue).join(', ')
     const more = value.len !== undefined && value.len > items.length ? ', …' : ''
