@@ -24,7 +24,7 @@ import { EDITOR_THEMES, DEFAULT_THEME_ID, themeById } from '../data/themes'
 import { usePythonRunner } from '../hooks/usePythonRunner'
 import { runRemote, type RemoteOutput } from '../runners/remote'
 import { execLineExtensions, setExecLine, setErrorLine } from './editorExecLine'
-import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon, ExtensionsIcon, DocIcon } from './icons'
+import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon, ExtensionsIcon, DocIcon, StepRunIcon } from './icons'
 import VizPanel from './VizPanel'
 import VariableTable from './VariableTable'
 import OutputPanel from './OutputPanel'
@@ -190,11 +190,18 @@ export default function Playground() {
   const remoteAbort = useRef<AbortController | null>(null)
   const editorRef = useRef<EditorView | null>(null)
   const activeTabRef = useRef<HTMLDivElement | null>(null)
-  // 실행이 끝나면 바로 결과부터: 마지막 스텝(최종 상태 + 전체 출력) + 출력 탭으로 점프.
-  // 한 줄씩 보고 싶으면 시각화의 ▶ 재생 — 끝에서 누르면 처음부터 재생된다.
+  // ▷ 실행: 결과부터 (마지막 스텝 + 출력 탭) / ▶▶ 한 줄씩 실행: 스텝 0부터 자동 재생
+  const autoPlayRef = useRef(false)
   const runner = usePythonRunner((res) => {
-    setStep(Math.max(0, res.snapshots.length - 1))
-    setPanelTab('output')
+    if (autoPlayRef.current) {
+      autoPlayRef.current = false
+      setStep(0)
+      setPanelTab('vars')
+      setPlaying(true)
+    } else {
+      setStep(Math.max(0, res.snapshots.length - 1))
+      setPanelTab('output')
+    }
   })
 
   const editorTheme = themeById(themeId)
@@ -464,7 +471,8 @@ export default function Playground() {
     }
   }
 
-  const handleRun = () => {
+  const handleRun = (autoPlay = false) => {
+    autoPlayRef.current = autoPlay && isPython
     setEditNotice(null)
     if (!activeFile) return
     if (!lang) {
@@ -554,7 +562,7 @@ export default function Playground() {
           <ActivityIcon
             type="button"
             title={isRunning ? '실행 중…' : '실행'}
-            onClick={handleRun}
+            onClick={() => handleRun()}
             disabled={runDisabled}
           >
             <RunIcon />
@@ -778,14 +786,26 @@ export default function Playground() {
                     <StopIcon />
                   </RunAction>
                 ) : (
-                  <RunAction
-                    type="button"
-                    onClick={handleRun}
-                    disabled={runDisabled}
-                    title={isPython ? '실행 (변수 추적 시작)' : `실행 (${lang?.name ?? ''} — 실행 서버)`}
-                  >
-                    <RunIcon size={20} />
-                  </RunAction>
+                  <>
+                    {isPython && (
+                      <StepRunAction
+                        type="button"
+                        onClick={() => handleRun(true)}
+                        disabled={runDisabled}
+                        title="한 줄씩 실행 — 처음부터 자동 재생"
+                      >
+                        <StepRunIcon size={19} />
+                      </StepRunAction>
+                    )}
+                    <RunAction
+                      type="button"
+                      onClick={() => handleRun()}
+                      disabled={runDisabled}
+                      title={isPython ? '실행 — 결과 바로 보기' : `실행 (${lang?.name ?? ''} — 실행 서버)`}
+                    >
+                      <RunIcon size={20} />
+                    </RunAction>
+                  </>
                 )}
               </TabsBar>
               <Breadcrumbs>{activeFile ? `ALGOHAE › ${activeFile.name}` : '\u00a0'}</Breadcrumbs>
@@ -829,6 +849,18 @@ export default function Playground() {
                   <>
                     <VizScroll>
                       <VizPanel snap={snap} prev={prev} currentLineText={currentLineText} />
+                      {step === total - 1 && !playing && total > 1 && (
+                        <ReplayCta
+                          type="button"
+                          onClick={() => {
+                            setStep(0)
+                            setPanelTab('vars')
+                            setPlaying(true)
+                          }}
+                        >
+                          ▶ 처음부터 한 줄씩 보기
+                        </ReplayCta>
+                      )}
                     </VizScroll>
                     <VizControls>
                       <PlayerControls
@@ -1407,6 +1439,48 @@ const RunAction = styled.button<{ $stop?: boolean }>`
   &:disabled {
     opacity: 0.4;
     cursor: default;
+  }
+`
+
+const StepRunAction = styled.button`
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--vs-accent, #0088ff);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: ${VS.tabInactive};
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+`
+
+const ReplayCta = styled.button`
+  margin: 18px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border: 1px solid var(--vs-accent, #0088ff);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vs-accent, #0088ff);
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--vs-accent, #0088ff);
+    color: #fff;
   }
 `
 
