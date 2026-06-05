@@ -153,6 +153,7 @@ export default function Landing({ onStart }: Props) {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
+          <img src="/logo.png" alt="" width={24} height={26} />
           알고
           <Collapse key={navVisible ? 'show' : 'hide'}>리즘&nbsp;알면서&nbsp;</Collapse>
           해
@@ -348,7 +349,10 @@ export default function Landing({ onStart }: Props) {
       <Footer>
         <FooterInner>
           <FooterBrand>
-            <strong>알고해</strong>
+            <strong>
+              <img src="/logo.png" alt="" width={26} height={28} />
+              알고해
+            </strong>
             <p>알고리즘이 동작하는 과정을 보여주는 학습 플랫폼</p>
           </FooterBrand>
           <FooterCols>
@@ -363,6 +367,13 @@ export default function Landing({ onStart }: Props) {
               <FooterLinkBtn type="button" onClick={onStart}>
                 코드 돌리러 가기
               </FooterLinkBtn>
+            </div>
+            <div>
+              <h4>만든 사람</h4>
+              <a href="https://github.com/eunchan2815" target="_blank" rel="noreferrer">
+                GitHub · eunchan2815
+              </a>
+              <a href="mailto:kec1208@gmail.com">kec1208@gmail.com</a>
             </div>
           </FooterCols>
         </FooterInner>
@@ -401,6 +412,9 @@ const FloatingNav = styled.nav<{ $visible: boolean }>`
 `
 
 const FloatLogo = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 7px;
   border: none;
   background: none;
   padding: 0;
@@ -1188,6 +1202,9 @@ const FooterInner = styled.div`
 
 const FooterBrand = styled.div`
   strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-family: 'Baby Shark', 'Pretendard', sans-serif;
     font-size: 22px;
     font-weight: 700;
