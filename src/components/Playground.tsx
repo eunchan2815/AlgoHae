@@ -77,6 +77,7 @@ function editorLangExtensions(fileName: string): Extension[] {
       return [javascript({ typescript: true })]
     case 'java':
       return [java()]
+    case 'c':
     case 'cpp':
     case 'cs':
       return [cpp()]

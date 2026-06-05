@@ -5,6 +5,7 @@ import javascriptLogo from '../assets/langs/javascript.svg'
 import typescriptLogo from '../assets/langs/typescript.svg'
 import javaLogo from '../assets/langs/java.svg'
 import cppLogo from '../assets/langs/cpp.svg'
+import cLogo from '../assets/langs/c.png'
 import csharpLogo from '../assets/langs/csharp.svg'
 import kotlinLogo from '../assets/langs/kotlin.svg'
 import swiftLogo from '../assets/langs/swift.svg'
@@ -35,6 +36,7 @@ export const LANGS: LangInfo[] = [
   { name: 'JavaScript', logo: javascriptLogo, ext: 'js', traced: false, remote: wandbox('JavaScript') },
   { name: 'TypeScript', logo: typescriptLogo, ext: 'ts', traced: false, remote: wandbox('TypeScript') },
   { name: 'Java', logo: javaLogo, ext: 'java', traced: false, remote: wandbox('Java') },
+  { name: 'C', logo: cLogo, ext: 'c', traced: false, remote: wandbox('C') },
   { name: 'C++', logo: cppLogo, ext: 'cpp', traced: false, remote: wandbox('C++') },
   { name: 'C#', logo: csharpLogo, ext: 'cs', traced: false, remote: wandbox('C#') },
   // Wandbox에 없거나(Kotlin) 환경이 깨진(Swift, catatonit 오류) 언어는 godbolt로 실행
