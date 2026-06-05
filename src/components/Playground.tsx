@@ -61,6 +61,23 @@ function persistFiles(files: UserFile[]) {
   localStorage.setItem(FILES_KEY, JSON.stringify(files))
 }
 
+// 예제는 "가상 탭"으로 연다 (내 파일에 추가하지 않음) — id 접두사 ex:
+const VIRTUAL_PREFIX = 'ex:'
+
+function templateByName(name: string): string | null {
+  const example = EXAMPLES.find((ex) => `${ex.id.replace(/-/g, '_')}.py` === name)
+  if (example) return example.code
+  const langExample = LANG_EXAMPLES.find((le) => le.name === name)
+  return langExample ? langExample.content : null
+}
+
+function resolveVirtual(id: string): UserFile | null {
+  if (!id.startsWith(VIRTUAL_PREFIX)) return null
+  const name = id.slice(VIRTUAL_PREFIX.length)
+  const content = templateByName(name)
+  return content !== null ? { id, name, content } : null
+}
+
 let fileSeq = 0
 function newFileId(): string {
   fileSeq += 1
@@ -154,7 +171,10 @@ export default function Playground() {
       try {
         const saved = JSON.parse(raw) as string[]
         // 빈 배열(탭 0개)도 유효한 상태 — 그대로 복원
-        if (Array.isArray(saved)) return saved.filter((id) => all.some((f) => f.id === id))
+        if (Array.isArray(saved))
+          return saved.filter(
+            (id) => all.some((f) => f.id === id) || resolveVirtual(id) !== null,
+          )
       } catch {
         /* 손상된 저장값은 무시 */
       }
@@ -230,11 +250,12 @@ export default function Playground() {
     localStorage.setItem('algohae:theme', id)
   }
 
-  // 탭이 하나도 없으면 빈 에디터 상태 (VS Code와 동일)
+  // 탭이 하나도 없으면 빈 에디터 상태 (VS Code와 동일). 예제는 가상 파일로 해석
+  const resolveFile = (id: string): UserFile | null =>
+    resolveVirtual(id) ?? files.find((f) => f.id === id) ?? null
   const activeFile =
     openTabs.length > 0
-      ? (files.find((f) => f.id === activeId) ??
-        files.find((f) => f.id === openTabs[openTabs.length - 1]) ??
+      ? (resolveFile(openTabs.includes(activeId) ? activeId : openTabs[openTabs.length - 1]) ??
         null)
       : null
   const code = activeFile?.content ?? ''
@@ -347,6 +368,25 @@ export default function Playground() {
 
   const handleCodeChange = (value: string) => {
     if (!activeFile) return
+    if (activeFile.id.startsWith(VIRTUAL_PREFIX)) {
+      // 예제를 수정하는 순간 내 파일로 승격 (이름이 겹치면 _2, _3…)
+      let name = activeFile.name
+      if (files.some((f) => f.name === name)) {
+        const dot = name.lastIndexOf('.')
+        const base = dot > 0 ? name.slice(0, dot) : name
+        const ext = dot > 0 ? name.slice(dot) : ''
+        let n = 2
+        while (files.some((f) => f.name === `${base}_${n}${ext}`)) n += 1
+        name = `${base}_${n}${ext}`
+      }
+      const file: UserFile = { id: newFileId(), name, content: value }
+      updateFiles([...files, file])
+      persistTabs(openTabs.map((t) => (t === activeFile.id ? file.id : t)))
+      setActiveId(file.id)
+      localStorage.setItem(ACTIVE_KEY, file.id)
+      if (result || remote.status !== 'idle') clearRunState()
+      return
+    }
     updateFiles(files.map((f) => (f.id === activeFile.id ? { ...f, content: value } : f)))
     // 코드가 바뀌면 이전 실행 결과는 무효
     if (result || remote.status !== 'idle') clearRunState()
@@ -433,24 +473,20 @@ export default function Playground() {
     }
   }
 
-  // 예제/템플릿 클릭 → 같은 이름의 파일을 내 파일에 만들고(있으면 갱신) 연다
-  const loadTemplate = (name: string, content: string) => {
-    const existing = files.find((f) => f.name === name)
-    if (existing) {
-      updateFiles(files.map((f) => (f.id === existing.id ? { ...f, content } : f)))
-      selectFile(existing.id)
-    } else {
-      const file: UserFile = { id: newFileId(), name, content }
-      updateFiles([...files, file])
-      persistTabs([...openTabs, file.id])
-      setActiveId(file.id)
-      localStorage.setItem(ACTIVE_KEY, file.id)
+  // 예제 클릭 → 가상 탭으로 연다 (내 파일에는 추가하지 않음 — 수정하면 그때 승격)
+  const openExample = (name: string) => {
+    const id = `${VIRTUAL_PREFIX}${name}`
+    if (!openTabs.includes(id)) persistTabs([...openTabs, id])
+    if (id !== activeId) {
+      setActiveId(id)
+      localStorage.setItem(ACTIVE_KEY, id)
+      setEditNotice(null)
       clearRunState()
     }
   }
 
   const loadExample = (example: Example) => {
-    loadTemplate(`${example.id.replace(/-/g, '_')}.py`, example.code)
+    openExample(`${example.id.replace(/-/g, '_')}.py`)
   }
 
   const runRemoteFile = async () => {
@@ -702,7 +738,10 @@ export default function Playground() {
             {folders.ex && (
             <FileList>
               {EXAMPLES.map((ex) => (
-                <FileItem key={ex.id} $active={false}>
+                <FileItem
+                  key={ex.id}
+                  $active={activeFile?.id === `${VIRTUAL_PREFIX}${ex.id.replace(/-/g, '_')}.py`}
+                >
                   <FileButton
                     type="button"
                     onClick={() => loadExample(ex)}
@@ -723,10 +762,10 @@ export default function Playground() {
             {folders.langEx && (
             <FileList>
               {LANG_EXAMPLES.map((le) => (
-                <FileItem key={le.name} $active={false}>
+                <FileItem key={le.name} $active={activeFile?.id === `${VIRTUAL_PREFIX}${le.name}`}>
                   <FileButton
                     type="button"
-                    onClick={() => loadTemplate(le.name, le.content)}
+                    onClick={() => openExample(le.name)}
                     title={`${langOf(le.name)?.name ?? ''} 실행 예제`}
                   >
                     <img src={langOf(le.name)?.logo ?? pythonLogo} alt="" width={15} height={15} />
@@ -752,7 +791,7 @@ export default function Playground() {
                   }}
                 >
                 {openTabs.map((tabId) => {
-                  const tabFile = files.find((f) => f.id === tabId)
+                  const tabFile = resolveFile(tabId)
                   if (!tabFile) return null
                   const tabLang = langOf(tabFile.name)
                   return (
@@ -813,7 +852,7 @@ export default function Playground() {
               <EditorHost>
                 {activeFile ? (
                   <CodeMirror
-                    key={activeFile.id}
+                    key={activeFile.name}
                     value={code}
                     onChange={handleCodeChange}
                     theme={editorTheme.theme}

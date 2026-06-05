@@ -43,6 +43,14 @@ function injectJavaUtf8(content: string): string {
   )
 }
 
+function injectCsUtf8(content: string): string {
+  // mono 콘솔도 한글이 ?로 깨진다 — Main 진입 직후 UTF-8(BOM 없이) 설정
+  return content.replace(
+    /(static\s+\w+\s+Main\s*\([^)]*\)\s*\{)/,
+    '$1\n        System.Console.OutputEncoding = new System.Text.UTF8Encoding(false);',
+  )
+}
+
 function injectKotlinUtf8(content: string): string {
   return content.replace(
     /(fun\s+main\s*\([^)]*\)\s*\{)/,
@@ -60,6 +68,7 @@ async function runWandbox(
   const compiler = compilers.find((c) => c.language === language)
   if (!compiler) throw new Error(`이 언어의 실행 환경을 찾지 못했어요: ${language}`)
   if (language === 'Java') content = injectJavaUtf8(content)
+  if (language === 'C#') content = injectCsUtf8(content)
 
   const res = await fetch(`${WANDBOX_API}/compile.json`, {
     method: 'POST',
@@ -76,7 +85,7 @@ async function runWandbox(
     throw new Error('실행 서버의 이 언어 환경이 점검 중이에요 — 잠시 후 다시 시도해 주세요')
   }
   return {
-    stdout: data.program_output ?? '',
+    stdout: (data.program_output ?? '').replace(/^\uFEFF/, ''),
     stderr,
     exitCode: data.status !== undefined && data.status !== '' ? Number(data.status) : null,
   }
