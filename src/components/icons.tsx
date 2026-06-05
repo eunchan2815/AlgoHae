@@ -112,6 +112,20 @@ export function ExtensionsIcon({ size = 24 }: IconProps) {
   )
 }
 
+export function DocIcon({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M13.5 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8.5L13.5 3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 3v5.5H19" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function CloseIcon({ size = 15 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">

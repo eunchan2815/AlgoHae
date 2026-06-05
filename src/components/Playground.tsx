@@ -24,7 +24,7 @@ import { EDITOR_THEMES, DEFAULT_THEME_ID, themeById } from '../data/themes'
 import { usePythonRunner } from '../hooks/usePythonRunner'
 import { runRemote, type RemoteOutput } from '../runners/remote'
 import { execLineExtensions, setExecLine, setErrorLine } from './editorExecLine'
-import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon, ExtensionsIcon } from './icons'
+import { FilesIcon, RunIcon, StopIcon, HomeIcon, NewFileIcon, CloseIcon, ExtensionsIcon, DocIcon } from './icons'
 import VizPanel from './VizPanel'
 import VariableTable from './VariableTable'
 import OutputPanel from './OutputPanel'
@@ -392,7 +392,7 @@ export default function Playground() {
       setCreating(false)
       return
     }
-    const name = trimmed.includes('.') ? trimmed : `${trimmed}.py`
+    const name = trimmed // 입력한 그대로 생성 (VS Code처럼 — 확장자 자동 추가 없음)
     if (files.some((f) => f.name === name)) {
       setEditNotice(`"${name}" 파일이 이미 있어요`)
       return
@@ -644,7 +644,11 @@ export default function Playground() {
                       }}
                       title="Enter 또는 더블클릭으로 이름 바꾸기"
                     >
-                      <img src={fileLang?.logo ?? pythonLogo} alt="" width={14} height={14} />
+                      {fileLang ? (
+                        <img src={fileLang.logo} alt="" width={14} height={14} />
+                      ) : (
+                        <DocIcon size={14} />
+                      )}
                       {file.name}
                     </FileButton>
                     )}
@@ -743,7 +747,11 @@ export default function Playground() {
                       $active={tabId === activeFile?.id}
                       onClick={() => selectFile(tabId)}
                     >
-                      <img src={tabLang?.logo ?? pythonLogo} alt="" width={14} height={14} />
+                      {tabLang ? (
+                        <img src={tabLang.logo} alt="" width={14} height={14} />
+                      ) : (
+                        <DocIcon size={14} />
+                      )}
                       {tabFile.name}
                       <TabClose
                         type="button"
