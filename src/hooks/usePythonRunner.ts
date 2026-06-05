@@ -12,8 +12,12 @@ type WorkerMsg =
 /** F-10 무한루프 방어 ② — 시간 상한. 초과 시 Worker를 강제 종료한다 */
 const RUN_TIMEOUT_MS = 30_000
 
-export function usePythonRunner() {
+export function usePythonRunner(onResult?: (result: RunResult) => void) {
   const workerRef = useRef<Worker | null>(null)
+  const onResultRef = useRef(onResult)
+  useEffect(() => {
+    onResultRef.current = onResult
+  })
   const timeoutRef = useRef<number | null>(null)
   const [status, setStatus] = useState<RunnerStatus>('boot')
   const [result, setResult] = useState<RunResult | null>(null)
@@ -41,6 +45,7 @@ export function usePythonRunner() {
         clearRunTimeout()
         setResult(msg.payload)
         setStatus('ready')
+        onResultRef.current?.(msg.payload)
       } else if (msg.type === 'error') {
         clearRunTimeout()
         setFatal(`실행 환경에 문제가 생겼어요: ${msg.message}`)

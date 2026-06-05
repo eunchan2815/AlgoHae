@@ -189,7 +189,12 @@ export default function Playground() {
   const remoteAbort = useRef<AbortController | null>(null)
   const editorRef = useRef<EditorView | null>(null)
   const activeTabRef = useRef<HTMLDivElement | null>(null)
-  const runner = usePythonRunner()
+  // 실행이 끝나면 바로 결과부터: 마지막 스텝(최종 상태 + 전체 출력) + 출력 탭으로 점프.
+  // 한 줄씩 보고 싶으면 시각화의 ▶ 재생 — 끝에서 누르면 처음부터 재생된다.
+  const runner = usePythonRunner((res) => {
+    setStep(Math.max(0, res.snapshots.length - 1))
+    setPanelTab('output')
+  })
 
   const editorTheme = themeById(themeId)
   const cssVars = {
