@@ -171,7 +171,7 @@ export default function Landing({ onStart }: Props) {
       <Hero>
         <HeroInner>
           <HeroText>
-              <Eyebrow>알고리즘, 알면서 해 — 알고해</Eyebrow>
+              <Slogan>알고리즘, 알면서 해 — 알고해</Slogan>
               <H1>
                 알고리즘이 동작하는
                 <br />
@@ -404,8 +404,9 @@ const FloatLogo = styled.button`
   border: none;
   background: none;
   padding: 0;
-  font-size: 17px;
-  font-weight: 800;
+  font-family: 'Baby Shark', 'Pretendard', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
   color: ${L.primary};
   letter-spacing: 1px;
   cursor: pointer;
@@ -493,6 +494,15 @@ const CenterInner = styled.div`
   max-width: 1080px;
   margin: 0 auto;
   text-align: center;
+`
+
+const Slogan = styled.p`
+  margin: 0 0 12px;
+  font-family: 'Baby Shark', 'Pretendard', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: ${L.primary};
 `
 
 const Eyebrow = styled.p`
@@ -1178,8 +1188,9 @@ const FooterInner = styled.div`
 
 const FooterBrand = styled.div`
   strong {
-    font-size: 20px;
-    font-weight: 800;
+    font-family: 'Baby Shark', 'Pretendard', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
     color: #fff;
     letter-spacing: 1px;
   }

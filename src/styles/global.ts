@@ -21,8 +21,23 @@ const fontFaces = FONT_WEIGHTS.map(
 ).join('\n')
 
 // $light: 랜딩(라이트) ↔ 앱(다크) — 오버스크롤 시 드러나는 배경도 페이지와 맞춘다
+const brandFontFaces = `
+  @font-face {
+    font-family: 'Baby Shark';
+    src: url('/fonts/babyshark-regular.otf') format('opentype');
+    font-weight: 400;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Baby Shark';
+    src: url('/fonts/babyshark-bold.otf') format('opentype');
+    font-weight: 700;
+    font-display: swap;
+  }`
+
 export const GlobalStyle = createGlobalStyle<{ $light?: boolean }>`
   ${fontFaces}
+  ${brandFontFaces}
 
   * {
     box-sizing: border-box;

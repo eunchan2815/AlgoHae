@@ -21,4 +21,5 @@ export const theme = {
   radius: '14px',
   font: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif",
   mono: "'SF Mono', Menlo, Consolas, 'Courier New', monospace",
+  brandFont: "'Baby Shark', 'Pretendard', sans-serif",
 } as const
