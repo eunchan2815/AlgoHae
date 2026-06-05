@@ -14,8 +14,8 @@ interface Props {
 
 type Ring = 'teal' | 'gold' | 'none'
 
-/** 박스 한 칸의 가로 이동 거리 (min-width 46 + gap 11) */
-const BOX_STEP = 57
+/** 박스 한 칸의 가로 이동 거리 (min-width 54 + gap 12) */
+const BOX_STEP = 66
 
 /** 원소가 전부 스칼라인 시퀀스인가 */
 function scalarItems(value: CapturedValue): CapturedValue[] | null {
@@ -196,7 +196,6 @@ function StackViz({
           )
         })}
       </Bucket>
-      <Caption>LIFO (Last In First Out) · 후입선출</Caption>
     </StackWrap>
   )
 }
@@ -254,26 +253,23 @@ function QueueViz({
             )
           })}
           </Channel>
-        </ChannelCol>
-        <DequeueSlot>
           {dequeuedValue !== null && (
             <DequeueGhost key={`dq-${step}`}>{String(dequeuedValue.v)}</DequeueGhost>
           )}
-        </DequeueSlot>
+        </ChannelCol>
         <FlowLabel $color="#d9534f">
           <FlowArrow>→</FlowArrow>
           Dequeue
         </FlowLabel>
       </QueueRow>
-      <Caption>FIFO (First In First Out) · 선입선출</Caption>
     </QueueOuter>
   )
 }
 
 // ── F-20 트리 (SVG 노드 그래프, in-order 가로 배치) ──
 
-const NODE_W = 46
-const LEVEL_H = 58
+const NODE_W = 58
+const LEVEL_H = 68
 
 /** in-order 순회 순서를 x 좌표로 — 부모가 항상 두 자식 사이에 놓여 균형 잡힌 모양 */
 function layoutTree(root: TreeNode) {
@@ -287,7 +283,7 @@ function layoutTree(root: TreeNode) {
     const left = node.l ? walk(node.l, depth + 1) : null
     const x = cursor * NODE_W + NODE_W / 2
     cursor += 1
-    const y = depth * LEVEL_H + 26
+    const y = depth * LEVEL_H + 30
     const right = node.r ? walk(node.r, depth + 1) : null
     nodes.push({ x, y, v: node.v })
     if (left) edges.push({ x1: x, y1: y, x2: left.x, y2: left.y })
@@ -311,8 +307,9 @@ function TreeViz({ root }: { root: TreeNode }) {
             y1={e.y1}
             x2={e.x2}
             y2={e.y2}
-            stroke="var(--vs-border, #2c3434)"
-            strokeWidth={1.5}
+            stroke="var(--vs-text-dim, #8a8a8a)"
+            strokeWidth={2}
+            opacity={0.85}
           />
         ))}
         {laid.nodes.map((n, i) => (
@@ -320,7 +317,7 @@ function TreeViz({ root }: { root: TreeNode }) {
             <circle
               cx={n.x}
               cy={n.y}
-              r={17}
+              r={21}
               fill="var(--vs-list-hover, #141716)"
               stroke="var(--vs-accent, #0088ff)"
               strokeWidth={1.8}
@@ -329,7 +326,7 @@ function TreeViz({ root }: { root: TreeNode }) {
               x={n.x}
               y={n.y + 4.5}
               textAnchor="middle"
-              fontSize={13}
+              fontSize={15}
               fontFamily="SF Mono, Menlo, monospace"
               fontWeight={600}
               fill="var(--vs-text, #d8d8d8)"
@@ -433,18 +430,19 @@ const BoxRow = styled.div`
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 `
 
+// 변경된 원소 = 초록 (진행·성공 느낌), 비교 중 = 파랑
 const RING_COLOR: Record<Ring, string> = {
   teal: theme.teal,
-  gold: theme.gold,
+  gold: '#2ea043',
   none: 'var(--vs-border, #2c3434)',
 }
 
 const RING_GLOW: Record<Ring, string> = {
   teal: '0 0 14px rgba(0, 136, 255, 0.45)',
-  gold: '0 0 14px rgba(217, 168, 51, 0.45)',
+  gold: '0 0 16px rgba(46, 160, 67, 0.5)',
   none: 'none',
 }
 
@@ -458,14 +456,14 @@ const slideIn = keyframes`
 `
 
 const Box = styled.div<{ $ring: Ring; $moved: boolean }>`
-  min-width: 46px;
-  height: 46px;
-  padding: 0 9px;
+  min-width: 54px;
+  height: 54px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: ${theme.mono};
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 600;
   border-radius: 11px;
   background: var(--vs-list-hover, #141716);
@@ -516,7 +514,7 @@ const StackWrap = styled.div`
 `
 
 const StackArrows = styled.div`
-  width: 240px;
+  width: 270px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -567,8 +565,8 @@ const PopGhost = styled.div`
 `
 
 const Bucket = styled.div`
-  width: 130px;
-  min-height: 150px;
+  width: 156px;
+  min-height: 184px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -582,12 +580,12 @@ const Bucket = styled.div`
 `
 
 const BucketBox = styled.div<{ $ring: Ring; $drop: boolean }>`
-  height: 38px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: ${theme.mono};
-  font-size: 15.5px;
+  font-size: 17.5px;
   font-weight: 600;
   border-radius: 7px;
   background: var(--vs-list-hover, #141716);
@@ -595,12 +593,6 @@ const BucketBox = styled.div<{ $ring: Ring; $drop: boolean }>`
   color: var(--vs-text, #d8d8d8);
   box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
   animation: ${({ $drop }) => ($drop ? pushDrop : 'none')} 0.55s cubic-bezier(0.3, 1.2, 0.5, 1);
-`
-
-const Caption = styled.span`
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--vs-text-dim, ${theme.subtext});
 `
 
 // 큐 (열린 통로)
@@ -638,6 +630,7 @@ const QueueOuter = styled.div`
 `
 
 const ChannelCol = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -663,7 +656,7 @@ const Marker = styled.span`
 const QueueRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
 `
 
 const FlowLabel = styled.span<{ $color: string }>`
@@ -682,8 +675,8 @@ const FlowArrow = styled.span`
 `
 
 const Channel = styled.div<{ $empty: boolean }>`
-  min-width: ${({ $empty }) => ($empty ? '130px' : '0')};
-  min-height: 60px;
+  min-width: ${({ $empty }) => ($empty ? '140px' : '0')};
+  min-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -694,14 +687,14 @@ const Channel = styled.div<{ $empty: boolean }>`
 `
 
 const ChannelBox = styled.div<{ $ring: Ring; $enter: boolean }>`
-  min-width: 46px;
-  height: 42px;
-  padding: 0 10px;
+  min-width: 54px;
+  height: 50px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: ${theme.mono};
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   border-radius: 8px;
   background: var(--vs-list-hover, #141716);
@@ -711,16 +704,13 @@ const ChannelBox = styled.div<{ $ring: Ring; $enter: boolean }>`
   animation: ${({ $enter }) => ($enter ? slideEnter : 'none')} 0.5s cubic-bezier(0.3, 1.1, 0.5, 1);
 `
 
-const DequeueSlot = styled.div`
-  width: 54px;
-  height: 42px;
-  position: relative;
-  margin-left: -6px;
-`
-
 const DequeueGhost = styled.div`
   position: absolute;
-  inset: 0;
+  right: -62px;
+  top: 50%;
+  width: 56px;
+  height: 50px;
+  margin-top: -12px;
   display: flex;
   align-items: center;
   justify-content: center;
