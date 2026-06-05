@@ -1051,10 +1051,12 @@ const ExampleBody = styled.div`
 
 const ChipRow = styled.div`
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 5px;
 `
 
 const MiniChip = styled.span`
+  white-space: nowrap;
   padding: 3px 9px;
   font-family: 'SF Mono', Menlo, monospace;
   font-size: 10px;
