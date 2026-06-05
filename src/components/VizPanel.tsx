@@ -222,16 +222,21 @@ function QueueViz({
 
   return (
     <QueueOuter>
-      <QueueMarkers>
-        <Marker>rear ↓</Marker>
-        <Marker>↓ front</Marker>
-      </QueueMarkers>
       <QueueRow>
         <FlowLabel $color="#4a9eda">
           Enqueue
           <FlowArrow>→</FlowArrow>
         </FlowLabel>
-        <Channel>
+        <ChannelCol>
+          {items.length > 0 ? (
+            <QueueMarkers>
+              <Marker>rear ↓</Marker>
+              <Marker>↓ front</Marker>
+            </QueueMarkers>
+          ) : (
+            <MarkerSpacer />
+          )}
+          <Channel $empty={items.length === 0}>
           {items.length === 0 && <EmptyHint>(빈 큐)</EmptyHint>}
           {display.map((item, idx) => {
             const i = items.length - 1 - idx // 원래 deque 인덱스
@@ -248,7 +253,8 @@ function QueueViz({
               </ChannelBox>
             )
           })}
-        </Channel>
+          </Channel>
+        </ChannelCol>
         <DequeueSlot>
           {dequeuedValue !== null && (
             <DequeueGhost key={`dq-${step}`}>{String(dequeuedValue.v)}</DequeueGhost>
@@ -631,13 +637,23 @@ const QueueOuter = styled.div`
   gap: 4px;
 `
 
+const ChannelCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+`
+
 const QueueMarkers = styled.div`
-  width: 56%;
   display: flex;
   justify-content: space-between;
+  padding: 0 16px 3px;
   font-family: ${theme.mono};
   font-size: 11.5px;
   color: var(--vs-text-dim, ${theme.subtext});
+`
+
+const MarkerSpacer = styled.div`
+  height: 18px;
 `
 
 const Marker = styled.span`
@@ -665,9 +681,9 @@ const FlowArrow = styled.span`
   font-size: 16px;
 `
 
-const Channel = styled.div`
-  min-width: 200px;
-  min-height: 62px;
+const Channel = styled.div<{ $empty: boolean }>`
+  min-width: ${({ $empty }) => ($empty ? '130px' : '0')};
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
