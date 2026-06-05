@@ -1,36 +1,26 @@
 import { createGlobalStyle } from 'styled-components'
 import { theme } from './theme'
 
-// Pretendard 자체 호스팅 (public/fonts) — 실제 쓰는 굵기만 선언한다
-const FONT_WEIGHTS = [
-  ['Regular', 400],
-  ['Medium', 500],
-  ['SemiBold', 600],
-  ['Bold', 700],
-  ['ExtraBold', 800],
-] as const
-
-const fontFaces = FONT_WEIGHTS.map(
-  ([name, weight]) => `
+// Pretendard 가변 폰트 — woff2 한 파일로 모든 굵기(45~920) 커버
+const fontFaces = `
   @font-face {
     font-family: 'Pretendard';
-    src: local('Pretendard ${name}'), url('/fonts/Pretendard-${name}.otf') format('opentype');
-    font-weight: ${weight};
+    src: local('Pretendard Variable'), url('/fonts/PretendardVariable.woff2') format('woff2-variations');
+    font-weight: 45 920;
     font-display: swap;
-  }`,
-).join('\n')
+  }`
 
 // $light: 랜딩(라이트) ↔ 앱(다크) — 오버스크롤 시 드러나는 배경도 페이지와 맞춘다
 const brandFontFaces = `
   @font-face {
     font-family: 'Baby Shark';
-    src: url('/fonts/babyshark-regular.otf') format('opentype');
+    src: url('/fonts/babyshark-regular.woff2') format('woff2');
     font-weight: 400;
     font-display: swap;
   }
   @font-face {
     font-family: 'Baby Shark';
-    src: url('/fonts/babyshark-bold.otf') format('opentype');
+    src: url('/fonts/babyshark-bold.woff2') format('woff2');
     font-weight: 700;
     font-display: swap;
   }`
