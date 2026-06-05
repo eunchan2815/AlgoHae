@@ -1,6 +1,7 @@
 // F-32 홈(메인) 페이지 — 레퍼런스.png 기반 라이트 랜딩
 // 구조: 네비 → 히어로 → 기능 → 동작 원리 → 예제 카드 → 사용자 후기 → 지원 언어 → CTA → 푸터
-import styled from 'styled-components'
+import { useEffect, useState } from 'react'
+import styled, { keyframes } from 'styled-components'
 import { EXAMPLES } from '../examples'
 import { LANGS } from '../data/langs'
 
@@ -131,29 +132,46 @@ interface Props {
 }
 
 export default function Landing({ onStart }: Props) {
+  // 히어로를 지나 스크롤하면 플로팅 네비가 나타난다 (첫 화면은 깨끗하게)
+  const [navVisible, setNavVisible] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setNavVisible(window.scrollY > 420)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    const initial = window.setTimeout(onScroll, 0)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(initial)
+    }
+  }, [])
+
   return (
     <Page>
-      {/* ── 네비게이션 ── */}
-      <Nav>
-        <NavInner>
-          <NavLogo>알고해</NavLogo>
-          <NavLinks>
-            <a href="#features">기능</a>
-            <a href="#how">동작 원리</a>
-            <a href="#examples">예제</a>
-            <a href="#langs">지원 언어</a>
-          </NavLinks>
-          <NavCta type="button" onClick={onStart}>
-            코드 돌리러 가기
-          </NavCta>
-        </NavInner>
-      </Nav>
-
+      {/* ── 플로팅 네비 (스크롤 시 등장) ── */}
+      <FloatingNav $visible={navVisible}>
+        <FloatLogo
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          알고
+          <Collapse key={navVisible ? 'show' : 'hide'}>리즘&nbsp;알면서&nbsp;</Collapse>
+          해
+        </FloatLogo>
+        <FloatLinks>
+          <a href="#features">기능</a>
+          <a href="#how">동작 원리</a>
+          <a href="#examples">예제</a>
+          <a href="#langs">지원 언어</a>
+        </FloatLinks>
+        <FloatCta type="button" onClick={onStart}>
+          코드 돌리러 가기
+        </FloatCta>
+      </FloatingNav>
       {/* ── 히어로 ── */}
       <Hero>
         <HeroInner>
           <HeroText>
-              <Eyebrow>ALGOHAE</Eyebrow>
+              <Eyebrow>알고리즘, 알면서 해 — 알고해</Eyebrow>
               <H1>
                 알고리즘이 동작하는
                 <br />
@@ -362,6 +380,97 @@ const Page = styled.main`
   color: ${L.navy};
 `
 
+const FloatingNav = styled.nav<{ $visible: boolean }>`
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 10px 8px 22px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  border: 1px solid ${L.line};
+  border-radius: 999px;
+  box-shadow: 0 10px 34px rgba(40, 40, 64, 0.13);
+  transform: translateX(-50%) translateY(${({ $visible }) => ($visible ? '0' : '-90px')});
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+  transition: transform 0.28s ease, opacity 0.28s ease;
+`
+
+const FloatLogo = styled.button`
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: ${L.primary};
+  letter-spacing: 1px;
+  cursor: pointer;
+`
+
+// "알고리즘 해" → "리즘"이 접히며 → "알고해"
+const collapseText = keyframes`
+  0%, 45% {
+    max-width: 7.5em;
+    opacity: 1;
+  }
+  85% {
+    max-width: 0;
+    opacity: 0;
+  }
+  100% {
+    max-width: 0;
+    opacity: 0;
+  }
+`
+
+const Collapse = styled.span`
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  max-width: 7.5em;
+  animation: ${collapseText} 2.2s cubic-bezier(0.6, 0, 0.2, 1) 0.6s forwards;
+`
+
+const FloatLinks = styled.div`
+  display: flex;
+  gap: 18px;
+
+  a {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: ${L.navy};
+    text-decoration: none;
+
+    &:hover {
+      color: ${L.primary};
+    }
+  }
+
+  @media (max-width: 700px) {
+    display: none;
+  }
+`
+
+const FloatCta = styled.button`
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: ${L.primary};
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:hover {
+    background: ${L.primaryDark};
+  }
+`
+
 const Section = styled.section<{ $tinted?: boolean }>`
   padding: 84px 24px;
   background: ${({ $tinted }) => ($tinted ? L.cream : '#fff')};
@@ -454,59 +563,6 @@ const GhostBtn = styled.button`
   &:hover {
     background: ${L.primarySoft};
   }
-`
-
-// ── 네비게이션 ──
-
-const Nav = styled.nav`
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid ${L.line};
-`
-
-const NavInner = styled.div`
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  gap: 28px;
-`
-
-const NavLogo = styled.span`
-  font-size: 20px;
-  font-weight: 800;
-  color: ${L.primary};
-  letter-spacing: 1px;
-`
-
-const NavLinks = styled.div`
-  display: flex;
-  gap: 22px;
-  flex: 1;
-
-  a {
-    font-size: 14px;
-    font-weight: 600;
-    color: ${L.navy};
-    text-decoration: none;
-
-    &:hover {
-      color: ${L.primary};
-    }
-  }
-
-  @media (max-width: 700px) {
-    display: none;
-  }
-`
-
-const NavCta = styled(PrimaryBtn)`
-  padding: 10px 20px;
-  font-size: 13.5px;
 `
 
 // ── 히어로 ──
