@@ -31,6 +31,12 @@ export const GlobalStyle = createGlobalStyle<{ $light?: boolean }>`
     height: 100%;
     overscroll-behavior: none;
     background: ${({ $light }) => ($light ? '#ffffff' : theme.bg)};
+    /* 랜딩에서는 스크롤바 숨김 (휠 스크롤은 유지) */
+    ${({ $light }) =>
+      $light
+        ? `scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }`
+        : ''}
   }
   body, #root {
     height: 100%;

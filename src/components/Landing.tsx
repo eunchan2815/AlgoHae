@@ -3,7 +3,6 @@
 import styled from 'styled-components'
 import { EXAMPLES } from '../examples'
 import { LANGS } from '../data/langs'
-import Reveal from './Reveal'
 
 // 레퍼런스.png 기반 라이트 팔레트 — primary는 브랜드 컬러 #0088FF (앱 내부는 다크 유지)
 const L = {
@@ -16,6 +15,98 @@ const L = {
   line: '#eceff3',
   blob: 'linear-gradient(140deg, #38a8ff 0%, #4f6cf7 55%, #b44bd2 100%)',
 } as const
+
+// 예제별 미니 UI 프리뷰 — 코드 대신 그 알고리즘의 시각화 모습을 보여준다
+function previewFor(id: string) {
+  switch (id) {
+    case 'bubble-sort':
+    case 'insertion-sort':
+      return (
+        <MiniBars>
+          {[16, 34, 10, 42, 24].map((h, i) => (
+            <i key={i} style={{ height: h }} className={i === 2 ? 'hl' : ''} />
+          ))}
+        </MiniBars>
+      )
+    case 'binary-search':
+      return (
+        <MiniCol>
+          <MiniBoxes>
+            {[1, 3, 5, 7].map((v, i) => (
+              <i key={i} className={i === 2 ? 'hl' : ''}>{v}</i>
+            ))}
+          </MiniBoxes>
+          <MiniPtr>↑ mid</MiniPtr>
+        </MiniCol>
+      )
+    case 'reverse-string':
+      return (
+        <MiniBoxes>
+          {['a', 'l', 'g', 'o'].map((v, i) => (
+            <i key={i} className={i === 0 || i === 3 ? 'hl' : ''}>{v}</i>
+          ))}
+        </MiniBoxes>
+      )
+    case 'char-count':
+      return (
+        <MiniDict>
+          {[['a', 2], ['l', 1], ['g', 1]].map(([k, v]) => (
+            <div key={String(k)}>
+              <b>{k}</b>
+              <span>{v}</span>
+            </div>
+          ))}
+        </MiniDict>
+      )
+    case 'dp-grid':
+      return (
+        <MiniGrid>
+          {[1, 1, 1, 1, 2, 3].map((v, i) => (
+            <i key={i} className={i === 5 ? 'hl' : ''}>{v}</i>
+          ))}
+        </MiniGrid>
+      )
+    case 'paren-check':
+      return (
+        <MiniStack>
+          <i className="hl">(</i>
+          <i>(</i>
+        </MiniStack>
+      )
+    case 'queue-line':
+      return (
+        <MiniQueue>
+          <i>철</i>
+          <i>영</i>
+          <i className="hl">민</i>
+        </MiniQueue>
+      )
+    case 'bst-insert':
+      return (
+        <svg width="86" height="58" viewBox="0 0 86 58" aria-hidden="true">
+          <line x1="43" y1="14" x2="20" y2="44" stroke="#b6bec9" strokeWidth="1.5" />
+          <line x1="43" y1="14" x2="66" y2="44" stroke="#b6bec9" strokeWidth="1.5" />
+          {[[43, 14, '5'], [20, 44, '3'], [66, 44, '8']].map(([cx, cy, t]) => (
+            <g key={String(t)}>
+              <circle cx={Number(cx)} cy={Number(cy)} r={11} fill="#fff" stroke="#0088ff" strokeWidth="1.6" />
+              <text x={Number(cx)} y={Number(cy) + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#282840">
+                {t}
+              </text>
+            </g>
+          ))}
+        </svg>
+      )
+    default:
+      // fibonacci · hanoi · gcd → 호출 스택 미니
+      return (
+        <MiniFrames>
+          <i className="hl" style={{ width: '52%' }} />
+          <i style={{ width: '70%' }} />
+          <i style={{ width: '88%' }} />
+        </MiniFrames>
+      )
+  }
+}
 
 const FEATURES = [
   { icon: '▶', title: '한 줄씩 실행', desc: '내 파이썬 코드가 실제로 실행되는 순서를 한 줄 한 줄 따라가요.' },
@@ -62,23 +153,16 @@ export default function Landing({ onStart }: Props) {
       <Hero>
         <HeroInner>
           <HeroText>
-            <Reveal>
               <Eyebrow>ALGOHAE</Eyebrow>
-            </Reveal>
-            <Reveal delay={0.08}>
               <H1>
                 알고리즘이 동작하는
                 <br />
                 과정을 눈으로 보세요
               </H1>
-            </Reveal>
-            <Reveal delay={0.16}>
               <HeroSub>
                 내가 쓴 파이썬 코드를 브라우저에서 실제로 실행하고,
                 <br />한 줄 한 줄 변수가 어떻게 변하는지 그대로 보여드려요.
               </HeroSub>
-            </Reveal>
-            <Reveal delay={0.24}>
               <HeroBtns>
                 <PrimaryBtn type="button" onClick={onStart}>
                   코드 돌리러 가기
@@ -87,7 +171,6 @@ export default function Landing({ onStart }: Props) {
                   예제 보기
                 </GhostBtn>
               </HeroBtns>
-            </Reveal>
           </HeroText>
 
           <HeroVisual aria-hidden="true">
@@ -115,7 +198,6 @@ export default function Landing({ onStart }: Props) {
 
       {/* ── 기능 ── */}
       <Section id="features">
-        <Reveal>
         <SplitInner>
           <SplitText>
             <Eyebrow>OUR ACTIVITY</Eyebrow>
@@ -135,12 +217,10 @@ export default function Landing({ onStart }: Props) {
             ))}
           </FeatureCards>
         </SplitInner>
-        </Reveal>
       </Section>
 
       {/* ── 동작 원리 ── */}
       <Section id="how" $tinted>
-        <Reveal>
         <SplitInner>
           <HowVisual aria-hidden="true">
             <BlobSmall />
@@ -169,21 +249,17 @@ export default function Landing({ onStart }: Props) {
             </P>
           </SplitText>
         </SplitInner>
-        </Reveal>
       </Section>
 
       {/* ── 예제 ── */}
       <Section id="examples">
-        <Reveal>
         <CenterInner>
           <Eyebrow>THE BEST REFERENCE</Eyebrow>
           <H2>예제로 바로 시작해보세요</H2>
           <ExampleGrid>
             {EXAMPLES.map((ex) => (
               <ExampleCard key={ex.id}>
-                <ExampleArt>
-                  <code>{ex.code.split('\n')[0]}</code>
-                </ExampleArt>
+                <ExamplePreview>{previewFor(ex.id)}</ExamplePreview>
                 <ExampleBody>
                   <ChipRow>
                     <MiniChip>TIME · {ex.time}</MiniChip>
@@ -199,12 +275,10 @@ export default function Landing({ onStart }: Props) {
             ))}
           </ExampleGrid>
         </CenterInner>
-        </Reveal>
       </Section>
 
       {/* ── 후기 ── */}
       <Section $tinted>
-        <Reveal>
         <CenterInner>
           <Eyebrow>SEE OUR IMPRESSIONS</Eyebrow>
           <H2>이런 분들께 좋아요</H2>
@@ -218,12 +292,10 @@ export default function Landing({ onStart }: Props) {
             ))}
           </VoiceGrid>
         </CenterInner>
-        </Reveal>
       </Section>
 
       {/* ── 지원 언어 ── */}
       <Section id="langs">
-        <Reveal>
         <CenterInner>
           <Eyebrow>OUR TEAM</Eyebrow>
           <H2>지원 언어</H2>
@@ -240,12 +312,10 @@ export default function Landing({ onStart }: Props) {
             ))}
           </LangGrid>
         </CenterInner>
-        </Reveal>
       </Section>
 
       {/* ── CTA ── */}
       <JoinSection>
-        <Reveal>
         <CenterInner>
           <Eyebrow>JOIN US</Eyebrow>
           <H2>지금 바로 돌려보세요</H2>
@@ -254,7 +324,6 @@ export default function Landing({ onStart }: Props) {
             코드 돌리러 가기 →
           </PrimaryBtn>
         </CenterInner>
-        </Reveal>
       </JoinSection>
 
       {/* ── 푸터 ── */}
@@ -678,15 +747,208 @@ const ExampleCard = styled.div`
   flex-direction: column;
 `
 
-const ExampleArt = styled.div`
-  padding: 18px 16px;
-  background: ${L.navy};
+const ExamplePreview = styled.div`
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f8fa;
+  border-bottom: 1px solid ${L.line};
+`
 
-  code {
+const MiniBars = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+
+  i {
+    width: 13px;
+    border-radius: 4px 4px 2px 2px;
+    background: #e3efff;
+    border: 1.5px solid #9cc3ee;
+  }
+
+  i.hl {
+    background: #dcffe4;
+    border-color: #1a7f37;
+  }
+`
+
+const MiniCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+`
+
+const MiniPtr = styled.span`
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: ${L.primary};
+`
+
+const MiniBoxes = styled.div`
+  display: flex;
+  gap: 5px;
+
+  i {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'SF Mono', Menlo, monospace;
-    font-size: 11.5px;
-    color: #9fe8dc;
-    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 700;
+    font-style: normal;
+    color: ${L.navy};
+    background: #fff;
+    border: 1.5px solid #c4cdd8;
+    border-radius: 7px;
+  }
+
+  i.hl {
+    border-color: ${L.primary};
+    background: #e8f3ff;
+  }
+`
+
+const MiniDict = styled.div`
+  display: flex;
+  gap: 6px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid #c4cdd8;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+
+  b {
+    padding: 1px 9px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 10.5px;
+    color: ${L.primary};
+    background: #eef2f6;
+    text-align: center;
+  }
+
+  span {
+    padding: 3px 9px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: ${L.navy};
+    background: #fff;
+    text-align: center;
+  }
+`
+
+const MiniGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  gap: 4px;
+
+  i {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: normal;
+    color: ${L.navy};
+    background: #fff;
+    border: 1.5px solid #c4cdd8;
+    border-radius: 5px;
+  }
+
+  i.hl {
+    border-color: #1a7f37;
+    background: #dcffe4;
+  }
+`
+
+const MiniStack = styled.div`
+  width: 46px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 4px 4px;
+  border-left: 2.5px solid #b6bec9;
+  border-right: 2.5px solid #b6bec9;
+  border-bottom: 2.5px solid #b6bec9;
+  border-radius: 0 0 4px 4px;
+
+  i {
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: normal;
+    color: ${L.navy};
+    background: #fff;
+    border: 1.5px solid #c4cdd8;
+    border-radius: 4px;
+  }
+
+  i.hl {
+    border-color: ${L.primary};
+    background: #e8f3ff;
+  }
+`
+
+const MiniQueue = styled.div`
+  display: flex;
+  gap: 4px;
+  padding: 5px 10px;
+  border-top: 2.5px solid #b6bec9;
+  border-bottom: 2.5px solid #b6bec9;
+
+  i {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: normal;
+    color: ${L.navy};
+    background: #fff;
+    border: 1.5px solid #c4cdd8;
+    border-radius: 6px;
+  }
+
+  i.hl {
+    border-color: ${L.primary};
+    background: #e8f3ff;
+  }
+`
+
+const MiniFrames = styled.div`
+  width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  i {
+    height: 12px;
+    border-radius: 4px;
+    background: #e3efff;
+    border: 1.5px solid #9cc3ee;
+  }
+
+  i.hl {
+    background: #dcffe4;
+    border-color: #1a7f37;
   }
 `
 
