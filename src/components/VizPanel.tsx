@@ -124,7 +124,25 @@ function BoxesViz({
   )
 }
 
-// ── F-19 스택 (세로 쌓기, 위가 top) ──
+// ── F-19 스택: U자 컨테이너 + PUSH(들어옴)/POP(빠져나감) 애니메이션 ──
+
+function ArcInArrow() {
+  return (
+    <svg width="46" height="30" viewBox="0 0 46 30" fill="none" aria-hidden="true">
+      <path d="M4 24 C 8 6, 30 2, 40 16" stroke="#4a9eda" strokeWidth="4.5" strokeLinecap="round" />
+      <polygon points="42,22 31,17 40,10" fill="#4a9eda" />
+    </svg>
+  )
+}
+
+function ArcOutArrow() {
+  return (
+    <svg width="46" height="30" viewBox="0 0 46 30" fill="none" aria-hidden="true">
+      <path d="M6 16 C 16 2, 38 6, 42 24" stroke="#d9534f" strokeWidth="4.5" strokeLinecap="round" />
+      <polygon points="44,29 35,22 46,20" fill="#d9534f" />
+    </svg>
+  )
+}
 
 function StackViz({
   items,
@@ -138,32 +156,52 @@ function StackViz({
   name: string
 }) {
   const pushed = prevItems !== null && items.length > prevItems.length
+  const popped = prevItems !== null && items.length < prevItems.length
+  const poppedValue = popped && prevItems ? prevItems[prevItems.length - 1] : null
   const reversed = [...items].reverse() // 마지막 원소(top)가 위로
+
   return (
     <StackWrap>
-      <StackCol>
+      <StackArrows>
+        <ArrowGroup>
+          <ArcInArrow />
+          <PushLabel>PUSH</PushLabel>
+        </ArrowGroup>
+        <PopSlot>
+          {poppedValue !== null && (
+            <PopGhost key={`pop-${step}`}>{String(poppedValue.v)}</PopGhost>
+          )}
+        </PopSlot>
+        <ArrowGroup>
+          <ArcOutArrow />
+          <PopLabel>POP</PopLabel>
+        </ArrowGroup>
+      </StackArrows>
+
+      <Bucket>
+        {items.length === 0 && <EmptyHint>(빈 스택)</EmptyHint>}
         {reversed.map((item, idx) => {
           const i = items.length - 1 - idx
           const isTop = i === items.length - 1
           const changed =
             prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
           return (
-            <StackBoxRow key={`${step}-${name}-${i}`}>
-              <StackBox $ring={changed ? 'gold' : 'none'} $drop={isTop && pushed}>
-                {String(item.v)}
-              </StackBox>
-              {isTop && <TopLabel>← top</TopLabel>}
-            </StackBoxRow>
+            <BucketBox
+              key={`${step}-${name}-${i}`}
+              $ring={changed ? 'gold' : 'none'}
+              $drop={isTop && pushed}
+            >
+              {String(item.v)}
+            </BucketBox>
           )
         })}
-        {items.length === 0 && <EmptyHint>(빈 스택)</EmptyHint>}
-        <StackBase />
-      </StackCol>
+      </Bucket>
+      <Caption>LIFO (Last In First Out) · 후입선출</Caption>
     </StackWrap>
   )
 }
 
-// ── F-19 큐 (가로, front → rear) ──
+// ── F-19 큐: 열린 통로 — 왼쪽(rear)으로 Enqueue, 오른쪽(front)으로 Dequeue ──
 
 function QueueViz({
   items,
@@ -176,34 +214,53 @@ function QueueViz({
   step: number
   name: string
 }) {
-  const origins = fromIndices(prevItems, items)
+  const enqueued = prevItems !== null && items.length > prevItems.length
+  const dequeued = prevItems !== null && items.length < prevItems.length
+  const dequeuedValue = dequeued && prevItems ? prevItems[0] : null
+  // deque의 index 0 = front → 오른쪽 끝에 그린다 (rear가 왼쪽에서 들어오는 그림)
+  const display = [...items].reverse()
+
   return (
-    <QueueWrap>
-      <EdgeLabel>front →</EdgeLabel>
-      <BoxRow>
-        {items.length === 0 && <EmptyHint>(빈 큐)</EmptyHint>}
-        {items.map((item, i) => {
-          const changed =
-            prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
-          const from = origins[i]
-          return (
-            <Box
-              key={`${step}-${name}-${i}`}
-              $ring={changed ? 'gold' : 'none'}
-              $moved={from !== null}
-              style={
-                from !== null
-                  ? ({ '--dx': `${(from - i) * BOX_STEP}px` } as CSSProperties)
-                  : undefined
-              }
-            >
-              {String(item.v)}
-            </Box>
-          )
-        })}
-      </BoxRow>
-      <EdgeLabel>← rear</EdgeLabel>
-    </QueueWrap>
+    <QueueOuter>
+      <QueueMarkers>
+        <Marker>rear ↓</Marker>
+        <Marker>↓ front</Marker>
+      </QueueMarkers>
+      <QueueRow>
+        <FlowLabel $color="#4a9eda">
+          Enqueue
+          <FlowArrow>→</FlowArrow>
+        </FlowLabel>
+        <Channel>
+          {items.length === 0 && <EmptyHint>(빈 큐)</EmptyHint>}
+          {display.map((item, idx) => {
+            const i = items.length - 1 - idx // 원래 deque 인덱스
+            const isRear = i === items.length - 1
+            const changed =
+              prevItems !== null && JSON.stringify(prevItems[i]) !== JSON.stringify(item)
+            return (
+              <ChannelBox
+                key={`${step}-${name}-${i}`}
+                $ring={changed ? 'gold' : 'none'}
+                $enter={isRear && enqueued}
+              >
+                {String(item.v)}
+              </ChannelBox>
+            )
+          })}
+        </Channel>
+        <DequeueSlot>
+          {dequeuedValue !== null && (
+            <DequeueGhost key={`dq-${step}`}>{String(dequeuedValue.v)}</DequeueGhost>
+          )}
+        </DequeueSlot>
+        <FlowLabel $color="#d9534f">
+          <FlowArrow>→</FlowArrow>
+          Dequeue
+        </FlowLabel>
+      </QueueRow>
+      <Caption>FIFO (First In First Out) · 선입선출</Caption>
+    </QueueOuter>
   )
 }
 
@@ -394,17 +451,6 @@ const slideIn = keyframes`
   }
 `
 
-const dropIn = keyframes`
-  from {
-    transform: translateY(-26px);
-    opacity: 0.2;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-`
-
 const Box = styled.div<{ $ring: Ring; $moved: boolean }>`
   min-width: 46px;
   height: 46px;
@@ -426,72 +472,251 @@ const Box = styled.div<{ $ring: Ring; $moved: boolean }>`
   z-index: ${({ $moved }) => ($moved ? 1 : 0)};
 `
 
-// 스택
+// 스택 (U자 컨테이너)
+
+const pushDrop = keyframes`
+  0% {
+    transform: translateY(-72px) translateX(-26px) rotate(-7deg);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(4px) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+`
+
+const popFly = keyframes`
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(52px, -44px) rotate(9deg);
+    opacity: 0;
+  }
+`
 
 const StackWrap = styled.div`
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 `
 
-const StackCol = styled.div`
+const StackArrows = styled.div`
+  width: 240px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+`
+
+const ArrowGroup = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
-`
-
-const StackBoxRow = styled.div`
-  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1px;
 `
 
-const StackBox = styled.div<{ $ring: Ring; $drop: boolean }>`
-  min-width: 86px;
-  height: 40px;
-  padding: 0 12px;
+const PushLabel = styled.span`
+  font-family: ${theme.mono};
+  font-size: 12px;
+  font-weight: 800;
+  color: #4a9eda;
+`
+
+const PopLabel = styled.span`
+  font-family: ${theme.mono};
+  font-size: 12px;
+  font-weight: 800;
+  color: #d9534f;
+`
+
+const PopSlot = styled.div`
+  width: 92px;
+  height: 42px;
+  position: relative;
+`
+
+const PopGhost = styled.div`
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: ${theme.mono};
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  border-radius: 9px;
+  border-radius: 8px;
+  background: var(--vs-list-hover, #141716);
+  border: 2px solid #d9534f;
+  color: var(--vs-text, #d8d8d8);
+  animation: ${popFly} 0.5s ease-in forwards;
+  pointer-events: none;
+`
+
+const Bucket = styled.div`
+  width: 130px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 5px;
+  padding: 8px 7px 7px;
+  border-left: 3px solid var(--vs-text-dim, #777);
+  border-right: 3px solid var(--vs-text-dim, #777);
+  border-bottom: 3px solid var(--vs-text-dim, #777);
+  border-radius: 0 0 6px 6px;
+`
+
+const BucketBox = styled.div<{ $ring: Ring; $drop: boolean }>`
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ${theme.mono};
+  font-size: 15.5px;
+  font-weight: 600;
+  border-radius: 7px;
   background: var(--vs-list-hover, #141716);
   border: 2px solid ${({ $ring }) => RING_COLOR[$ring]};
   color: var(--vs-text, #d8d8d8);
   box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
-  animation: ${({ $drop }) => ($drop ? dropIn : 'none')} 0.3s ease;
+  animation: ${({ $drop }) => ($drop ? pushDrop : 'none')} 0.55s cubic-bezier(0.3, 1.2, 0.5, 1);
 `
 
-const StackBase = styled.div`
-  width: 110px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--vs-text-dim, #555);
-  opacity: 0.6;
+const Caption = styled.span`
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--vs-text-dim, ${theme.subtext});
 `
 
-const TopLabel = styled.span`
+// 큐 (열린 통로)
+
+const slideEnter = keyframes`
+  0% {
+    transform: translateX(-86px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+  }
+`
+
+const dequeueFly = keyframes`
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(58px);
+    opacity: 0;
+  }
+`
+
+const QueueOuter = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`
+
+const QueueMarkers = styled.div`
+  width: 56%;
+  display: flex;
+  justify-content: space-between;
   font-family: ${theme.mono};
   font-size: 11.5px;
-  color: var(--vs-accent, ${theme.teal});
+  color: var(--vs-text-dim, ${theme.subtext});
+`
+
+const Marker = styled.span`
   white-space: nowrap;
 `
 
-// 큐
-
-const QueueWrap = styled.div`
+const QueueRow = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
 `
 
-const EdgeLabel = styled.span`
+const FlowLabel = styled.span<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-family: ${theme.mono};
-  font-size: 11.5px;
-  color: var(--vs-accent, ${theme.teal});
+  font-size: 12px;
+  font-weight: 800;
+  color: ${({ $color }) => $color};
   white-space: nowrap;
+`
+
+const FlowArrow = styled.span`
+  font-size: 16px;
+`
+
+const Channel = styled.div`
+  min-width: 200px;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px 14px;
+  border-top: 3px solid var(--vs-text-dim, #777);
+  border-bottom: 3px solid var(--vs-text-dim, #777);
+`
+
+const ChannelBox = styled.div<{ $ring: Ring; $enter: boolean }>`
+  min-width: 46px;
+  height: 42px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ${theme.mono};
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--vs-list-hover, #141716);
+  border: 2px solid ${({ $ring }) => RING_COLOR[$ring]};
+  color: var(--vs-text, #d8d8d8);
+  box-shadow: ${({ $ring }) => RING_GLOW[$ring]};
+  animation: ${({ $enter }) => ($enter ? slideEnter : 'none')} 0.5s cubic-bezier(0.3, 1.1, 0.5, 1);
+`
+
+const DequeueSlot = styled.div`
+  width: 54px;
+  height: 42px;
+  position: relative;
+  margin-left: -6px;
+`
+
+const DequeueGhost = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ${theme.mono};
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--vs-list-hover, #141716);
+  border: 2px solid #d9534f;
+  color: var(--vs-text, #d8d8d8);
+  animation: ${dequeueFly} 0.5s ease-in forwards;
+  pointer-events: none;
 `
 
 const EmptyHint = styled.span`
