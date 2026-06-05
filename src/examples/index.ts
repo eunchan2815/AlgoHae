@@ -149,6 +149,25 @@ for val in [5, 3, 8, 1, 4, 9]:
 print("트리 완성!")
 `,
   },
+  {
+    id: 'dp-grid',
+    name: '격자 경로 (DP)',
+    enName: 'DP GRID',
+    desc: '왼쪽 칸과 위 칸의 경로 수를 더해서 표를 채워요',
+    time: 'O(n·m)',
+    space: 'O(n·m)',
+    code: `rows, cols = 3, 4
+grid = [[0] * cols for _ in range(rows)]
+for c in range(cols):
+    grid[0][c] = 1
+for r in range(rows):
+    grid[r][0] = 1
+for r in range(1, rows):
+    for c in range(1, cols):
+        grid[r][c] = grid[r - 1][c] + grid[r][c - 1]
+print("경로 수:", grid[rows - 1][cols - 1])
+`,
+  },
 ]
 
 export const DEFAULT_CODE = EXAMPLES[0].code
