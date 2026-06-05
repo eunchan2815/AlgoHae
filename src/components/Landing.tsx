@@ -153,7 +153,6 @@ export default function Landing({ onStart }: Props) {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-          <img src="/logo.png" alt="" width={24} height={26} />
           알고
           <Collapse key={navVisible ? 'show' : 'hide'}>리즘&nbsp;알면서&nbsp;</Collapse>
           해
